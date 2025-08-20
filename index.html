@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jerry Smart Matrix</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
 body {
   font-family: 'Roboto', sans-serif;
@@ -55,7 +54,8 @@ h2 { color: gold; margin-bottom: 10px; text-shadow: 0 0 8px #ffd700; }
 
 <header>
   <h1>Jerry Smart Matrix</h1>
-  <img src="https://i.ibb.co/5RZ8B9K/jerry-logo.png" alt="Jerry Logo">
+  <!-- صورة شعار مدمجة Base64 -->
+  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFoAAABaCAYAAABx..." alt="Jerry Logo">
 </header>
 
 <div class="container">
@@ -90,26 +90,38 @@ const contractABI = [
 
 let provider, signer, contract, userAddress;
 
-async function connectWallet(){
-  if(window.ethereum){
-    provider=new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer=provider.getSigner();
-    userAddress=await signer.getAddress();
-    document.getElementById("userAddress").innerText=userAddress;
-    contract=new ethers.Contract(contractAddress, contractABI, signer);
-    loadLevels();
-    getUserInfo();
-  } else { alert("Please install MetaMask or compatible wallet!"); }
+async function connectWallet() {
+    try {
+        if (typeof window.ethereum !== 'undefined') {
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+            userAddress = await signer.getAddress();
+            document.getElementById("userAddress").innerText = userAddress;
+            contract = new ethers.Contract(contractAddress, contractABI, signer);
+            loadLevels();
+            getUserInfo();
+            alert("Wallet connected: " + userAddress);
+        } else {
+            alert("Please install MetaMask!");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Failed to connect wallet: " + err.message);
+    }
 }
 
 async function getUserInfo(){
   try{
-    const levels=await contract.getUserLevels(userAddress);
-    document.getElementById("userLevels").innerText=levels.join(", ")||"-";
-    const referrals=await contract.getUserReferrals(userAddress);
-    document.getElementById("userReferrals").innerText=referrals.join(", ")||"-";
-  }catch(err){console.error(err); document.getElementById("userLevels").innerText="Error"; document.getElementById("userReferrals").innerText="Error";}
+    const levels = await contract.getUserLevels(userAddress);
+    document.getElementById("userLevels").innerText = levels.join(", ")||"-";
+    const referrals = await contract.getUserReferrals(userAddress);
+    document.getElementById("userReferrals").innerText = referrals.join(", ")||"-";
+  } catch(err) {
+    console.error(err);
+    document.getElementById("userLevels").innerText="Error";
+    document.getElementById("userReferrals").innerText="Error";
+  }
 }
 
 async function loadLevels(){
@@ -121,20 +133,20 @@ async function loadLevels(){
       const price=await contract.levelPrice(i);
       const btn=document.createElement("button");
       btn.className="btn level-btn";
-      btn.innerHTML=`<img src="https://i.ibb.co/0j1bC2F/level-icon.png" class="level-icon">Buy Level ${i} - ${ethers.utils.formatUnits(price,18)} JD`;
+      btn.innerHTML=`Level ${i} - ${ethers.utils.formatUnits(price,18)} JD`;
       btn.onclick=()=>buyLevel(i);
       container.appendChild(btn);
     }
-  }catch(err){console.error(err);}
+  } catch(err){console.error(err);}
 }
 
 async function buyLevel(level){
   try{
-    const tx=await contract.buyLevel(level);
+    const tx = await contract.buyLevel(level);
     await tx.wait();
     alert(`Level ${level} purchased successfully!`);
     getUserInfo();
-  }catch(err){console.error(err); alert("Transaction failed!");}
+  } catch(err){console.error(err); alert("Transaction failed!");}
 }
 
 document.getElementById("connectBtn").addEventListener("click", connectWallet);

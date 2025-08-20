@@ -5,56 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jerry Smart Matrix</title>
 <style>
-body {
-  font-family: 'Roboto', sans-serif;
-  margin:0; padding:0;
-  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-  color: #fff;
-}
-header {
-  text-align: center;
-  padding: 30px 20px;
-  background: rgba(0,0,0,0.6);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
-header h1 {
-  color: gold;
-  font-size: 2.2rem;
-  margin: 0;
-  text-shadow: 0 0 12px #ffd700;
-}
-header img {
-  width: 80px; margin-top: 10px;
-}
-.container {
-  padding: 20px; max-width: 600px; margin: auto;
-}
-.btn {
-  background: gold; color:black; font-weight:bold;
-  padding: 15px 20px; margin:10px 0;
-  border:none; border-radius:12px;
-  cursor:pointer; width:100%; font-size:1rem;
-  transition: all 0.3s ease; box-shadow:0 4px 6px rgba(0,0,0,0.3);
-}
+body { font-family: 'Roboto', sans-serif; margin:0; padding:0; background: linear-gradient(135deg,#0f0c29,#302b63,#24243e); color:#fff; }
+header { text-align:center; padding:30px 20px; background: rgba(0,0,0,0.6); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+header h1 { color: gold; font-size: 2.2rem; margin:0; text-shadow: 0 0 12px #ffd700; }
+header img { width:80px; margin-top:10px; }
+.container { padding:20px; max-width:600px; margin:auto; }
+.btn { background: gold; color:black; font-weight:bold; padding:15px 20px; margin:10px 0; border:none; border-radius:12px; cursor:pointer; width:100%; font-size:1rem; transition: all 0.3s ease; box-shadow:0 4px 6px rgba(0,0,0,0.3); }
 .btn:hover { background:#ffdf00; transform: scale(1.05); }
-.card {
-  background: rgba(255,255,255,0.05);
-  padding: 20px; border-radius:15px; margin-bottom:15px;
-  box-shadow:0 4px 8px rgba(0,0,0,0.2);
-}
-h2 { color: gold; margin-bottom: 10px; text-shadow: 0 0 8px #ffd700; }
+.card { background: rgba(255,255,255,0.05); padding:20px; border-radius:15px; margin-bottom:15px; box-shadow:0 4px 8px rgba(0,0,0,0.2); }
+h2 { color: gold; margin-bottom:10px; text-shadow:0 0 8px #ffd700; }
 .level-btn { background: #ffbf00; color:black; margin-top:5px; }
-.info { margin-bottom: 10px; }
-.level-icon {
-  width: 24px; vertical-align:middle; margin-right:5px;
-}
+.info { margin-bottom:10px; }
+.level-icon { width:24px; vertical-align:middle; margin-right:5px; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>Jerry Smart Matrix</h1>
-  <!-- صورة شعار مدمجة Base64 -->
   <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFoAAABaCAYAAABx..." alt="Jerry Logo">
 </header>
 
@@ -76,6 +44,7 @@ h2 { color: gold; margin-bottom: 10px; text-shadow: 0 0 8px #ffd700; }
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
 <script>
+window.addEventListener('load', function() {
 const contractAddress = "0xB963CA4f5d123a1622f6D6ABd80c4bef85c90D12";
 const contractABI = [
   {"inputs":[{"internalType":"address","name":"_token","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
@@ -87,7 +56,6 @@ const contractABI = [
   {"inputs":[{"internalType":"uint256","name":"level","type":"uint256"}],"name":"levelPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
   {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"checkUserExists","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"}
 ];
-
 let provider, signer, contract, userAddress;
 
 async function connectWallet() {
@@ -102,30 +70,21 @@ async function connectWallet() {
             loadLevels();
             getUserInfo();
             alert("Wallet connected: " + userAddress);
-        } else {
-            alert("Please install MetaMask!");
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Failed to connect wallet: " + err.message);
-    }
+        } else { alert("Please install MetaMask!"); }
+    } catch (err) { console.error(err); alert("Failed to connect wallet: " + err.message); }
 }
 
-async function getUserInfo(){
-  try{
+async function getUserInfo() {
+  try {
     const levels = await contract.getUserLevels(userAddress);
     document.getElementById("userLevels").innerText = levels.join(", ")||"-";
     const referrals = await contract.getUserReferrals(userAddress);
     document.getElementById("userReferrals").innerText = referrals.join(", ")||"-";
-  } catch(err) {
-    console.error(err);
-    document.getElementById("userLevels").innerText="Error";
-    document.getElementById("userReferrals").innerText="Error";
-  }
+  } catch(err) { console.error(err); document.getElementById("userLevels").innerText="Error"; document.getElementById("userReferrals").innerText="Error"; }
 }
 
-async function loadLevels(){
-  try{
+async function loadLevels() {
+  try {
     const maxLevel=11;
     const container=document.getElementById("levelsContainer");
     container.innerHTML="";
@@ -140,8 +99,8 @@ async function loadLevels(){
   } catch(err){console.error(err);}
 }
 
-async function buyLevel(level){
-  try{
+async function buyLevel(level) {
+  try {
     const tx = await contract.buyLevel(level);
     await tx.wait();
     alert(`Level ${level} purchased successfully!`);
@@ -150,6 +109,7 @@ async function buyLevel(level){
 }
 
 document.getElementById("connectBtn").addEventListener("click", connectWallet);
+});
 </script>
 
 </body>

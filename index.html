@@ -20,8 +20,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
 <script>
-const contractAddress = "0xB963CA4f5d123a1622f6D6ABd80c4bef85c90D12"; // عقدك
-const contractABI = [ /* هنا تحط ABI ديال العقد */ ];
+const contractAddress = "0xB963CA4f5d123a1622f6D6ABd80c4bef85c90D12"; 
+const contractABI = [ /* ABI كامل + view functions */ ];
 
 const levelPrices = [5000,10000,20000,80000,160000,300000,500000,1000000,2000000,5000000];
 
@@ -52,29 +52,28 @@ async function connectWallet() {
 
 async function loadUserData(){
   try {
-    // رصيد BNB
     const balance = await provider.getBalance(account);
     bnbTxt.textContent = "BNB: " + ethers.utils.formatEther(balance);
 
-    // رصيد JRY
-    const jryBalance = await contract.jerryToken().then(t => new ethers.Contract(t, [
+    const jerryTokenAddress = await contract.jerryToken();
+    const ERC20_ABI = [
       { "constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function" },
       { "constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"type":"function"}
-    ], signer));
-
-    const decimals = await jryBalance.decimals();
-    const balanceToken = await jryBalance.balanceOf(account);
+    ];
+    const jryContract = new ethers.Contract(jerryTokenAddress, ERC20_ABI, signer);
+    const decimals = await jryContract.decimals();
+    const balanceToken = await jryContract.balanceOf(account);
     jryTxt.textContent = "JRY: " + balanceToken / (10**decimals);
 
-    // المستخدم
-    const user = await contract.users(account);
-    referralsTxt.textContent = "Direct Referrals: " + user.directReferrals;
+    const levelsBought = await contract.getUserLevels(account);
+    const referrals = await contract.getUserReferrals(account);
+    referralsTxt.textContent = "Direct Referrals: " + referrals;
 
-    let levelsBought = [];
-    for(let i=0;i<10;i++){
-      if(user.levelsPurchased[i]) levelsBought.push(i+1);
+    let bought = [];
+    for(let i=0;i<levelsBought.length;i++){
+      if(levelsBought[i]) bought.push(i+1);
     }
-    levelsTxt.textContent = "Levels Purchased: " + levelsBought.join(", ");
+    levelsTxt.textContent = "Levels Purchased: " + bought.join(", ");
   } catch(e){ console.error(e); }
 }
 

@@ -1,107 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Jerry Smart Matrix DApp</title>
+  <meta charset="UTF-8">
+  <title>Jerry Smart DApp</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #fff; }
+    button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; border-radius: 10px; }
+    #status { margin-top: 20px; font-size: 18px; }
+    .card { background: #222; padding: 20px; border-radius: 15px; width: 400px; margin: 20px auto; }
+  </style>
 </head>
 <body>
-<h2>Jerry Smart Matrix</h2>
-<button id="connectBtn">🔗 Connect Wallet</button>
 
-<div>
-  <p id="account">الحساب: غير مربوط</p>
-  <p id="bnbBalance">BNB: --</p>
-  <p id="jryBalance">JRY: --</p>
-  <p id="referrals">Direct Referrals: --</p>
-  <p id="levels">Levels Purchased: --</p>
-</div>
+  <h1>🚀 Jerry Smart DApp</h1>
+  <div class="card">
+    <button onclick="connectWallet()">🔗 Connect Wallet</button>
+    <p id="status">Not connected</p>
+    <button onclick="callContract()">⚡ Call Contract</button>
+  </div>
 
-<div id="levelsPanel"></div>
+  <script>
+    let provider, signer, contract;
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
-<script>
-const contractAddress = "0xB963CA4f5d123a1622f6D6ABd80c4bef85c90D12"; 
-const contractABI = [ /* ABI كامل + view functions */ ];
-
-const levelPrices = [5000,10000,20000,80000,160000,300000,500000,1000000,2000000,5000000];
-
-let provider, signer, contract, account;
-
-const connectBtn = document.getElementById("connectBtn");
-const accountTxt = document.getElementById("account");
-const bnbTxt = document.getElementById("bnbBalance");
-const jryTxt = document.getElementById("jryBalance");
-const referralsTxt = document.getElementById("referrals");
-const levelsTxt = document.getElementById("levels");
-const levelsPanel = document.getElementById("levelsPanel");
-
-async function connectWallet() {
-  if(window.ethereum){
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = provider.getSigner();
-    account = await signer.getAddress();
-    accountTxt.textContent = "الحساب: " + account;
-    contract = new ethers.Contract(contractAddress, contractABI, signer);
-    loadUserData();
-    renderLevels();
-  } else {
-    alert("⚠️ خاصك MetaMask");
-  }
-}
-
-async function loadUserData(){
-  try {
-    const balance = await provider.getBalance(account);
-    bnbTxt.textContent = "BNB: " + ethers.utils.formatEther(balance);
-
-    const jerryTokenAddress = await contract.jerryToken();
-    const ERC20_ABI = [
-      { "constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function" },
-      { "constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"type":"function"}
+    // 🔑 عقدك
+    const contractAddress = "0xB963CA4f5d123a1622f6D6ABd80c4bef85c90D12"; 
+    const contractABI = [
+      // هنا تحط الــ ABI ديال العقد ديالك
     ];
-    const jryContract = new ethers.Contract(jerryTokenAddress, ERC20_ABI, signer);
-    const decimals = await jryContract.decimals();
-    const balanceToken = await jryContract.balanceOf(account);
-    jryTxt.textContent = "JRY: " + balanceToken / (10**decimals);
 
-    const levelsBought = await contract.getUserLevels(account);
-    const referrals = await contract.getUserReferrals(account);
-    referralsTxt.textContent = "Direct Referrals: " + referrals;
-
-    let bought = [];
-    for(let i=0;i<levelsBought.length;i++){
-      if(levelsBought[i]) bought.push(i+1);
+    async function connectWallet() {
+      if (window.ethereum) {
+        try {
+          await ethereum.request({ method: "eth_requestAccounts" });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          contract = new ethers.Contract(contractAddress, contractABI, signer);
+          document.getElementById("status").innerText = "✅ Wallet connected!";
+        } catch (err) {
+          console.error(err);
+          document.getElementById("status").innerText = "❌ Connection failed";
+        }
+      } else {
+        alert("Install MetaMask first!");
+      }
     }
-    levelsTxt.textContent = "Levels Purchased: " + bought.join(", ");
-  } catch(e){ console.error(e); }
-}
 
-function renderLevels(){
-  levelsPanel.innerHTML = "";
-  for(let i=0;i<10;i++){
-    const div = document.createElement("div");
-    div.style.margin = "10px 0";
-    div.innerHTML = `
-      <strong>Level ${i+1}</strong> - Price: ${levelPrices[i]} JRY
-      <button onclick="buyLevel(${i})">Activate</button>
-    `;
-    levelsPanel.appendChild(div);
-  }
-}
-
-async function buyLevel(level){
-  try{
-    let ref = prompt("📌 ضع عنوان المرجع أو اتركه فارغ:");
-    if(ref == "") ref = ethers.constants.AddressZero;
-    const tx = await contract.buyLevel(level, ref);
-    await tx.wait();
-    alert("✅ Level " + (level+1) + " activated!");
-    loadUserData();
-  } catch(e){ console.error(e); alert("❌ فشل التفعيل"); }
-}
-
-connectBtn.addEventListener("click", connectWallet);
-</script>
+    async function callContract() {
+      if (!contract) return alert("Connect wallet first!");
+      try {
+        // مثال: تستدعي دالة فالعقد
+        let result = await contract.owner(); // يبان ليك مالك العقد
+        alert("Contract Owner: " + result);
+      } catch (err) {
+        console.error(err);
+        alert("Error calling contract");
+      }
+    }
+  </script>
 </body>
 </html>

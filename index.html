@@ -2,60 +2,90 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Jerry Smart DApp</title>
+  <title>Jerry Smart Matrix DApp</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #fff; }
-    button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; border-radius: 10px; }
-    #status { margin-top: 20px; font-size: 18px; }
-    .card { background: #222; padding: 20px; border-radius: 15px; width: 400px; margin: 20px auto; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; }
+    button { padding: 10px 20px; margin: 5px; font-size: 16px; border-radius: 8px; cursor: pointer; }
+    .card { background: #222; padding: 15px; border-radius: 12px; width: 450px; margin: 20px auto; }
+    input { padding: 5px; border-radius: 5px; width: 60%; margin: 5px 0; }
   </style>
 </head>
 <body>
+  <h1>🚀 Jerry Smart Matrix</h1>
 
-  <h1>🚀 Jerry Smart DApp</h1>
   <div class="card">
     <button onclick="connectWallet()">🔗 Connect Wallet</button>
     <p id="status">Not connected</p>
-    <button onclick="callContract()">⚡ Call Contract</button>
+    <hr>
+    <h3>Levels</h3>
+    <div id="levels"></div>
+    <hr>
+    <input type="number" id="levelInput" placeholder="Enter level to buy">
+    <input type="text" id="refInput" placeholder="Referrer address">
+    <button onclick="buyLevel()">Buy Level</button>
+    <hr>
+    <button onclick="getUserInfo()">Get My Info</button>
+    <div id="userInfo"></div>
   </div>
 
   <script>
     let provider, signer, contract;
-
-    // 🔑 عقدك
-    const contractAddress = "0xB963CA4f5d123a1622f6D6ABd80c4bef85c90D12"; 
+    const contractAddress = "0xB963CA4f5d123a1622f6D6ABd80c4bef85c90D12";
     const contractABI = [
-      // هنا تحط الــ ABI ديال العقد ديالك
+      {"inputs":[{"internalType":"address","name":"_token","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
+      {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"level","type":"uint256"}],"name":"LevelPurchased","type":"event"},
+      {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Payout","type":"event"},
+      {"inputs":[{"internalType":"uint256","name":"level","type":"uint256"}],"name":"buyLevel","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getUserLevels","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getUserReferrals","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"level","type":"uint256"}],"name":"levelPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"checkUserExists","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"}
     ];
 
     async function connectWallet() {
       if (window.ethereum) {
-        try {
-          await ethereum.request({ method: "eth_requestAccounts" });
-          provider = new ethers.providers.Web3Provider(window.ethereum);
-          signer = provider.getSigner();
-          contract = new ethers.Contract(contractAddress, contractABI, signer);
-          document.getElementById("status").innerText = "✅ Wallet connected!";
-        } catch (err) {
-          console.error(err);
-          document.getElementById("status").innerText = "❌ Connection failed";
-        }
+        await ethereum.request({ method: 'eth_requestAccounts' });
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        contract = new ethers.Contract(contractAddress, contractABI, signer);
+        document.getElementById("status").innerText = "✅ Wallet connected: " + await signer.getAddress();
+        displayLevels();
       } else {
         alert("Install MetaMask first!");
       }
     }
 
-    async function callContract() {
-      if (!contract) return alert("Connect wallet first!");
+    async function displayLevels() {
+      let html = "";
+      for (let i=0; i<10; i++) {
+        let price = await contract.levelPrice(i);
+        html += `<p>Level ${i}: ${ethers.utils.formatUnits(price, 18)} JD</p>`;
+      }
+      document.getElementById("levels").innerHTML = html;
+    }
+
+    async function buyLevel() {
+      const level = document.getElementById("levelInput").value;
+      const ref = document.getElementById("refInput").value;
+      if (!level || !ref) return alert("Enter level and referrer address!");
       try {
-        // مثال: تستدعي دالة فالعقد
-        let result = await contract.owner(); // يبان ليك مالك العقد
-        alert("Contract Owner: " + result);
+        const tx = await contract.buyLevel(level, ref);
+        await tx.wait();
+        alert("Level purchased successfully!");
       } catch (err) {
         console.error(err);
-        alert("Error calling contract");
+        alert("Failed to buy level: " + err.message);
       }
+    }
+
+    async function getUserInfo() {
+      const user = await signer.getAddress();
+      const levels = await contract.getUserLevels(user);
+      const refs = await contract.getUserReferrals(user);
+      let html = `<p>Levels: ${levels.join(", ")}</p>`;
+      html += `<p>Referrals: ${refs.join(", ")}</p>`;
+      document.getElementById("userInfo").innerHTML = html;
     }
   </script>
 </body>

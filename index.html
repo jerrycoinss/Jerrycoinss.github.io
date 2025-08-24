@@ -1,39 +1,102 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jerry Smart Matrix DApp</title>
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
-<style>
-body { font-family: Arial, sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-button { padding: 10px 20px; margin: 10px; cursor: pointer; background: #ffcc00; border: none; border-radius: 5px; font-weight: bold; }
-input { padding: 5px; margin: 5px; border-radius: 5px; border: none; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jerry Token Sale</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f3f4f6; display: flex; justify-content: center; padding-top: 50px; }
+    .container { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 320px; text-align: center; }
+    input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 10px; border: 1px solid #ccc; }
+    button { padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+    button.connect { background: #2563eb; color: white; }
+    button.buy { background: #16a34a; color: white; }
+    p { margin: 5px 0; }
+  </style>
 </head>
 <body>
-<h1>Jerry Smart Matrix</h1>
-<button id="connectWallet">Connect Wallet</button>
-<div id="walletAddress"></div>
-<h2>Buy Level</h2>
-<input type="number" id="levelNumber" placeholder="Level number (1-11)" min="1" max="11" />
-<input type="text" id="referrer" placeholder="Referrer address" />
-<button id="buyLevelBtn">Buy Level</button>
-<h2>User Info</h2>
-<button id="getUserInfo">Get My Info</button>
-<pre id="userInfo"></pre>
-<script>
-let provider, signer, contract;
-const contractAddress = '0xB963CA4f5d123a1622f6D6ABd80c4bef85c90D12';
-const contractABI = [
-  {"inputs":[{"internalType":"address","name":"_jerryToken","type":"address"},{"internalType":"address","name":"_treasury","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
-  {"inputs":[{"internalType":"uint8","name":"_level","type":"uint8"},{"internalType":"address","name":"_referrer","type":"address"}],"name":"buyLevel","outputs":[],"stateMutability":"nonpayable","type":"function"},
-  {"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"getUserLevels","outputs":[{"internalType":"bool[10]","name":"","type":"bool[10]"}],"stateMutability":"view","type":"function"},
-  {"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"getUserReferrals","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
-];document.getElementById('connectWallet').onclick = async () => { if(window.ethereum){ provider = new ethers.providers.Web3Provider(window.ethereum); await provider.send("eth_requestAccounts", []); signer = provider.getSigner(); const address = await signer.getAddress(); document.getElementById('walletAddress').innerText = Connected: ${address}; contract = new ethers.Contract(contractAddress, contractABI, signer); } else { alert('Please install Metamask!'); } };
+  <div class="container">
+    <h2>Jerry Token Sale</h2>
+    <div id="walletSection">
+      <button id="connectBtn" class="connect">Connect Wallet</button>
+    </div>
+    <div id="saleSection" style="display:none;">
+      <p>Connected: <span id="account"></span></p>
+      <p>Remaining JRY: <span id="remaining">0</span></p>
+      <input type="number" id="usdtAmount" placeholder="USDT amount">
+      <p>You will get: <span id="jryAmount">0</span> JRY</p>
+      <button id="buyBtn" class="buy">Buy JRY</button>
+    </div>
+  </div>
 
-document.getElementById('buyLevelBtn').onclick = async () => { const level = parseInt(document.getElementById('levelNumber').value); const ref = document.getElementById('referrer').value; if(!contract){ alert('Connect wallet first!'); return; } try { const tx = await contract.buyLevel(level, ref); await tx.wait(); alert('Level purchased successfully!'); } catch(e){ alert('Error: '+e.message); } };
+  <script>
+    const CONTRACT_ADDRESS = "0x8e8cF4ac64e1C39A96A70C5900583FA402Cb6Be2";
+    const RATE = 20000;
+    const JRY_DECIMALS = 18;
+    const USDT_DECIMALS = 18;
 
-document.getElementById('getUserInfo').onclick = async () => { if(!contract){ alert('Connect wallet first!'); return; } const address = await signer.getAddress(); const levels = await contract.getUserLevels(address); const referrals = await contract.getUserReferrals(address); document.getElementById('userInfo').innerText = Levels: ${levels}\nDirect Referrals: ${referrals}; }; </script>
+    const CONTRACT_ABI = [
+      "function buy(uint256 usdtAmount) external",
+      "function remaining() view returns (uint256)",
+      "event Bought(address indexed buyer, uint256 usdtIn, uint256 jryOut)"
+    ];
 
+    let provider, signer, contract, account;
+
+    const connectBtn = document.getElementById("connectBtn");
+    const buyBtn = document.getElementById("buyBtn");
+    const walletSection = document.getElementById("walletSection");
+    const saleSection = document.getElementById("saleSection");
+    const accountSpan = document.getElementById("account");
+    const remainingSpan = document.getElementById("remaining");
+    const usdtInput = document.getElementById("usdtAmount");
+    const jrySpan = document.getElementById("jryAmount");
+
+    connectBtn.onclick = async () => {
+      if (!window.ethereum) return alert("Install MetaMask!");
+      provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = await provider.getSigner();
+      account = await signer.getAddress();
+      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      accountSpan.innerText = account;
+      walletSection.style.display = "none";
+      saleSection.style.display = "block";
+      fetchRemaining();
+    };
+
+    usdtInput.oninput = () => {
+      const value = parseFloat(usdtInput.value);
+      if (isNaN(value)) {
+        jrySpan.innerText = "0";
+        return;
+      }
+      jrySpan.innerText = (value * RATE).toLocaleString();
+    };
+
+    buyBtn.onclick = async () => {
+      const value = parseFloat(usdtInput.value);
+      if (isNaN(value) || value <= 0) return alert("Enter valid USDT amount!");
+      try {
+        const amount = ethers.parseUnits(value.toString(), USDT_DECIMALS);
+        const tx = await contract.buy(amount);
+        await tx.wait();
+        alert("Purchase successful!");
+        fetchRemaining();
+      } catch(e) {
+        console.error(e);
+        alert("Transaction failed!");
+      }
+    };
+
+    async function fetchRemaining() {
+      try {
+        const rem = await contract.remaining();
+        remainingSpan.innerText = ethers.formatUnits(rem, JRY_DECIMALS);
+      } catch(e) { console.error(e); }
+    }
+  </script>
 </body>
 </html>

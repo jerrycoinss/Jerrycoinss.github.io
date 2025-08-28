@@ -1,84 +1,100 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Jerry Smart Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0d1117;
-      color: #fff;
-      text-align: center;
-      padding: 40px;
-    }
-    button {
-      padding: 12px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      background: #f39c12;
-      color: #fff;
-      font-weight: bold;
-      margin: 10px;
-    }
-    .card {
-      background: #161b22;
-      padding: 20px;
-      border-radius: 15px;
-      margin: 20px auto;
-      width: 350px;
-      box-shadow: 0px 0px 10px rgba(255,255,255,0.1);
-    }
-  </style>
-</head>
-<body>
-  <h1>🚀 Jerry Smart Matrix</h1>
-  <button onclick="connectWallet()">Connect Wallet</button>
-  
-  <div class="card" id="dashboard" style="display:none;">
-    <h2>📊 Dashboard</h2>
-    <p><b>Wallet:</b> <span id="wallet"></span></p>
-    <p><b>Balance:</b> <span id="balance"></span> JRY</p>
-  </div>
+import { useState } from "react";
+import { ethers } from "ethers";
+import Web3Modal from "web3modal";
 
-  <script>
-    const tokenAddress = "0x2eb0d06Fad17a1Ba62D705873cF5E49778794134"; // عقد JRY
-    const tokenABI = [
-      "function balanceOf(address) view returns (uint256)",
-      "function decimals() view returns (uint8)",
-      "function symbol() view returns (string)"
-    ];
+// عنوان العقد الذكي
+const CONTRACT_ADDRESS = "0x33c847a9954f5FcB8a5cf32Bbbc3dDD56Bb80730";
 
-    let provider, signer, contract;
+// ABI كامل (اللي عطيتيني)
+const ABI = [ 
+  // فقط حطيت أهم الميثودز، تقدر تزيد كاملين
+  {
+    "inputs": [],
+    "name": "totalUsers",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalCommissions",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "name": "users",
+    "outputs": [
+      { "internalType": "address", "name": "referrer", "type": "address" },
+      { "internalType": "uint256", "name": "directReferrals", "type": "uint256" },
+      { "internalType": "uint256", "name": "totalEarned", "type": "uint256" },
+      { "internalType": "uint8", "name": "maxLevel", "type": "uint8" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+];
 
-    async function connectWallet() {
-      if (typeof window.ethereum === "undefined") {
-        alert("🚨 Metamask not found! Install it first.");
-        return;
-      }
+export default function JerryDashboard() {
+  const [account, setAccount] = useState("");
+  const [totalUsers, setTotalUsers] = useState(0n);
+  const [totalCommissions, setTotalCommissions] = useState(0n);
+  const [userInfo, setUserInfo] = useState(null);
 
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer = provider.getSigner();
+  async function connectWallet() {
+    try {
+      const web3Modal = new Web3Modal();
+      const connection = await web3Modal.connect();
+      const provider = new ethers.BrowserProvider(connection);
+      const signer = await provider.getSigner();
       const address = await signer.getAddress();
+      setAccount(address);
 
-      document.getElementById("wallet").innerText = address;
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
 
-      // ربط العقد
-      contract = new ethers.Contract(tokenAddress, tokenABI, provider);
+      // نجيبو المعلومات من العقد
+      const users = await contract.totalUsers();
+      const commissions = await contract.totalCommissions();
+      const user = await contract.users(address);
 
-      // جلب الرصيد
-      const balance = await contract.balanceOf(address);
-      const decimals = await contract.decimals();
-      const symbol = await contract.symbol();
+      setTotalUsers(users);
+      setTotalCommissions(commissions);
+      setUserInfo(user);
 
-      const formatted = ethers.utils.formatUnits(balance, decimals);
-      document.getElementById("balance").innerText = formatted;
-
-      document.getElementById("dashboard").style.display = "block";
+    } catch (err) {
+      console.error("Connection failed:", err);
     }
-  </script>
-</body>
-</html>
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+      <h1 className="text-2xl font-bold mb-6">Jerry dApp Dashboard</h1>
+
+      {!account ? (
+        <button
+          onClick={connectWallet}
+          className="px-6 py-3 bg-blue-600 text-white rounded-xl"
+        >
+          Connect Wallet
+        </button>
+      ) : (
+        <div className="bg-white shadow-lg rounded-xl p-6 w-96 text-left space-y-3">
+          <p><b>Wallet:</b> {account}</p>
+          <p><b>Total Users:</b> {totalUsers.toString()}</p>
+          <p><b>Total Commissions:</b> {ethers.formatEther(totalCommissions)} ETH</p>
+
+          {userInfo && (
+            <div className="mt-4">
+              <h2 className="font-bold">My Info:</h2>
+              <p>Referrer: {userInfo.referrer}</p>
+              <p>Direct Referrals: {userInfo.directReferrals.toString()}</p>
+              <p>Total Earned: {ethers.formatEther(userInfo.totalEarned)} ETH</p>
+              <p>Max Level: {userInfo.maxLevel}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

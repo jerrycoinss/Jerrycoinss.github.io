@@ -1,61 +1,100 @@
-<script>
-        // --- الإعدادات الأساسية ---
-        const contractAddress = "0x5aF2Ec60b61061202Fa6907EaEd309284F587C5b";
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>نموذج بطاقة التهنئة</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 40px; }
+        input { padding: 8px; width: 300px; margin-bottom: 15px; }
+        button { font-size: 16px; padding: 10px 20px; cursor: pointer; margin: 5px; }
+        #greetingDisplay { margin-top: 25px; font-size: 24px; color: #007BFF; font-weight: bold; }
+        #status { margin-top: 20px; font-style: italic; color: #555; }
+    </style>
+</head>
+<body>
+    <h1>نموذج مشروع dApp</h1>
+
+    <div id="greetingDisplay">...يتم التحميل</div>
+
+    <hr style="margin: 30px 0;">
+
+    <input type="text" id="newGreetingInput" placeholder="أدخل رسالة ترحيب جديدة هنا...">
+    <br>
+    <button id="setGreetingButton">غيّر الرسالة</button>
+
+    <div id="status"></div>
+
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+    <script>
+        // استبدل هذا بعنوان عقدك بعد نشره!
+        const contractAddress = "YOUR_DEPLOYED_CONTRACT_ADDRESS"; 
         const contractABI = [
-            "function levelPrice(uint256) view returns (uint256)"
+            "function getGreeting() view returns (string)",
+            "function setGreeting(string)"
         ];
 
-        // --- الوصول لعناصر الصفحة ---
-        const connectButton = document.getElementById('connectButton');
-        const dataContainer = document.getElementById('dataContainer');
-        
         let provider;
+        let signer;
         let contract;
 
-        // --- الدوال الرئيسية ---
-
-        // دالة لربط المحفظة
-        async function connectWallet() {
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    
-                    // -- السطر الذي تم تصحيحه --
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
-                    // -------------------------
-
-                    contract = new ethers.Contract(contractAddress, contractABI, provider);
-                    
-                    connectButton.textContent = "✅ تم الربط بنجاح";
-                    console.log("Wallet connected!");
-
-                    await readContractData();
-
-                } catch (error) {
-                    console.error("User rejected request or error occurred:", error);
-                    connectButton.textContent = "فشل الربط";
-                }
-            } else {
+        const greetingDisplay = document.getElementById('greetingDisplay');
+        const newGreetingInput = document.getElementById('newGreetingInput');
+        const setGreetingButton = document.getElementById('setGreetingButton');
+        const statusDisplay = document.getElementById('status');
+        
+        async function init() {
+            if (typeof window.ethereum === 'undefined') {
                 alert("الرجاء تثبيت MetaMask!");
-                connectButton.textContent = "MetaMask غير موجود";
+                return;
             }
+
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send("eth_requestAccounts", []); // ربط المحفظة
+            signer = provider.getSigner();
+            contract = new ethers.Contract(contractAddress, contractABI, signer);
+            
+            await readGreeting();
         }
 
-        // دالة لقراءة سعر المستوى الأول
-        async function readContractData() {
+        async function readGreeting() {
             try {
-                const priceBigNumber = await contract.levelPrice(1);
-                const priceFormatted = ethers.utils.formatEther(priceBigNumber);
+                const currentGreeting = await contract.getGreeting();
+                greetingDisplay.textContent = currentGreeting;
+            } catch (error) {
+                console.error("Could not read greeting:", error);
+                greetingDisplay.textContent = "خطأ في القراءة";
+            }
+        }
+        
+        async function writeGreeting() {
+            const newGreeting = newGreetingInput.value;
+            if (!newGreeting) {
+                alert("الرجاء إدخال رسالة.");
+                return;
+            }
 
-                dataContainer.innerHTML = `سعر المستوى الأول هو: <strong>${priceFormatted} JERRY</strong>`;
-                console.log("Level 1 Price:", priceFormatted);
+            try {
+                statusDisplay.textContent = "⏳ جاري إرسال المعاملة... الرجاء التأكيد في MetaMask.";
+                const tx = await contract.setGreeting(newGreeting);
+                
+                statusDisplay.textContent = "🔄 ...يتم التعدين، الرجاء الانتظار";
+                await tx.wait(); // انتظار تأكيد المعاملة على البلوكتشين
+                
+                statusDisplay.textContent = "✅ نجحت العملية!";
+                await readGreeting(); // تحديث الرسالة المعروضة
+
+                setTimeout(() => { statusDisplay.textContent = ""; }, 5000);
 
             } catch (error) {
-                console.error("Could not fetch level price:", error);
-                dataContainer.textContent = "حدث خطأ أثناء قراءة البيانات.";
+                console.error("Could not set greeting:", error);
+                statusDisplay.textContent = "❌ فشلت العملية.";
             }
         }
 
-        // --- ربط الدالة بالزر ---
-        connectButton.addEventListener('click', connectWallet);
-</script>
+        setGreetingButton.addEventListener('click', writeGreeting);
+        
+        // تشغيل كل شيء عند تحميل الصفحة
+        init();
+    </script>
+</body>
+</html>

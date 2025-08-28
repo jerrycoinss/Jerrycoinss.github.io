@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jerry Smart Matrix - Ultimate Dashboard</title>
+<title>Jerry Smart Matrix - Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.css" rel="stylesheet" />
@@ -22,11 +22,12 @@ input { padding: 8px; width: 250px; margin-top: 5px; border-radius: 6px; border:
 </head>
 <body>
 
-<h1>Jerry Smart Matrix - Ultimate Dashboard</h1>
+<h1>Jerry Smart Matrix - Dashboard</h1>
 
-<!-- زر اتصال MetaMask -->
-<div style="text-align:center; margin-bottom: 20px;">
-    <button onclick="connectMetaMask()">Connect MetaMask</button>
+<div class="card">
+    <h2>Wallet Connection</h2>
+    <button onclick="connectWallet()">Connect Wallet</button>
+    <p id="walletAddress">Not connected</p>
 </div>
 
 <div class="card">
@@ -80,24 +81,24 @@ const abi = [
 
 let provider, signer, contract, networkInstance, nodesDS, edgesDS;
 
-async function connectMetaMask() {
+async function connectWallet(){
     if(window.ethereum){
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         contract = new ethers.Contract(contractAddress, abi, signer);
+        const addr = await signer.getAddress();
+        document.getElementById("walletAddress").innerText = "Connected: " + addr;
         updateStats();
         drawMemberDashboard();
         drawTeamTree();
-        setInterval(updateStats, 10000);
-        setInterval(drawMemberDashboard, 10000);
-        setInterval(drawTeamTree, 10000);
     } else {
         alert("Please install MetaMask!");
     }
 }
 
 async function updateStats(){
+    if(!contract) return;
     const totalUsers = await contract.totalUsers();
     const totalCommissions = await contract.totalCommissions();
     document.getElementById("totalUsers").innerText = totalUsers.toString();
@@ -105,6 +106,7 @@ async function updateStats(){
 }
 
 async function drawMemberDashboard(){
+    if(!contract) return;
     const userAddress = await signer.getAddress();
     const userData = await contract.users(userAddress);
     document.getElementById("myLevel").innerText = userData.maxLevel;
@@ -114,6 +116,7 @@ async function drawMemberDashboard(){
 }
 
 async function buyLevel(){
+    if(!contract) return;
     const level = parseInt(document.getElementById("level").value);
     const referrer = document.getElementById("referrer").value;
     try{
@@ -130,6 +133,7 @@ async function buyLevel(){
 }
 
 async function drawTeamTree(){
+    if(!contract) return;
     const userAddress = await signer.getAddress();
     const nodes = [{id: userAddress, label: "You\nLvl: 0\nEarned: 0", color: "#4CAF50"}];
     const edges = [];
@@ -177,7 +181,18 @@ async function drawTeamTree(){
 }
 
 async function searchMember(){
+    if(!contract) return;
     const searchAddr = document.getElementById("search").value.trim();
     if(!searchAddr) return;
-    const userData = await contract.users(searchAddr);
-    alert(`User: ${searchAddr}\nLevel: ${
+    try{
+        const userData = await contract.users(searchAddr);
+        alert(`Referrer: ${userData.referrer}\nLevel: ${userData.maxLevel}\nEarned: ${ethers.utils.formatUnits(userData.totalEarned,18)} JRY\nDirects: ${userData.directReferrals}\nTeam size: ${userData.team.length}`);
+    } catch(err){
+        console.error(err);
+        alert("Member not found or invalid address");
+    }
+}
+
+</script>
+</body>
+</html>

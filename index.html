@@ -1,100 +1,117 @@
-import { useState } from "react";
-import { ethers } from "ethers";
-import Web3Modal from "web3modal";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Jerry Dapp</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0f172a; color: #fff; text-align: center; padding: 30px; }
+    button { padding: 10px 20px; margin: 10px; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; }
+    #connect { background: #2563eb; color: #fff; }
+    #transfer { background: #16a34a; color: #fff; }
+    .card { background: #1e293b; padding: 20px; margin: 20px auto; border-radius: 12px; width: 400px; }
+    input { width: 90%; padding: 8px; margin: 8px 0; border-radius: 6px; border: none; }
+  </style>
+</head>
+<body>
 
-// عنوان العقد الذكي
-const CONTRACT_ADDRESS = "0x33c847a9954f5FcB8a5cf32Bbbc3dDD56Bb80730";
+  <h1>🚀 Jerry Développements Dapp</h1>
+  <button id="connect">🔗 Connect Wallet</button>
 
-// ABI كامل (اللي عطيتيني)
-const ABI = [ 
-  // فقط حطيت أهم الميثودز، تقدر تزيد كاملين
-  {
-    "inputs": [],
-    "name": "totalUsers",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "totalCommissions",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
-    "name": "users",
-    "outputs": [
-      { "internalType": "address", "name": "referrer", "type": "address" },
-      { "internalType": "uint256", "name": "directReferrals", "type": "uint256" },
-      { "internalType": "uint256", "name": "totalEarned", "type": "uint256" },
-      { "internalType": "uint8", "name": "maxLevel", "type": "uint8" }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-];
+  <div class="card" id="dashboard" style="display:none;">
+    <h2>📊 Dashboard</h2>
+    <p><b>Address:</b> <span id="userAddress">-</span></p>
+    <p><b>Balance:</b> <span id="userBalance">0</span> JRY</p>
 
-export default function JerryDashboard() {
-  const [account, setAccount] = useState("");
-  const [totalUsers, setTotalUsers] = useState(0n);
-  const [totalCommissions, setTotalCommissions] = useState(0n);
-  const [userInfo, setUserInfo] = useState(null);
+    <h3>💸 Send JRY</h3>
+    <input type="text" id="recipient" placeholder="Recipient Address">
+    <input type="number" id="amount" placeholder="Amount">
+    <button id="transfer">Send</button>
+  </div>
 
-  async function connectWallet() {
-    try {
-      const web3Modal = new Web3Modal();
-      const connection = await web3Modal.connect();
-      const provider = new ethers.BrowserProvider(connection);
-      const signer = await provider.getSigner();
-      const address = await signer.getAddress();
-      setAccount(address);
+  <script>
+    const contractAddress = "0x2eb0d06Fad17a1Ba62D705873cF5E49778794134"; // Jerry contract
+    const abi = [
+      {
+        "constant": true,
+        "inputs": [{"name":"_owner","type":"address"}],
+        "name": "balanceOf",
+        "outputs": [{"name":"balance","type":"uint256"}],
+        "type": "function"
+      },
+      {
+        "constant": false,
+        "inputs": [
+          {"name":"_to","type":"address"},
+          {"name":"_value","type":"uint256"}
+        ],
+        "name": "transfer",
+        "outputs": [{"name":"success","type":"bool"}],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [{"name":"","type":"uint8"}],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [],
+        "name": "symbol",
+        "outputs": [{"name":"","type":"string"}],
+        "type": "function"
+      }
+    ];
 
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+    let web3;
+    let account;
+    let contract;
+    let decimals = 18;
 
-      // نجيبو المعلومات من العقد
-      const users = await contract.totalUsers();
-      const commissions = await contract.totalCommissions();
-      const user = await contract.users(address);
+    document.getElementById("connect").onclick = async () => {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const accounts = await web3.eth.getAccounts();
+        account = accounts[0];
+        document.getElementById("userAddress").innerText = account;
 
-      setTotalUsers(users);
-      setTotalCommissions(commissions);
-      setUserInfo(user);
+        contract = new web3.eth.Contract(abi, contractAddress);
 
-    } catch (err) {
-      console.error("Connection failed:", err);
+        decimals = await contract.methods.decimals().call();
+
+        updateBalance();
+
+        document.getElementById("dashboard").style.display = "block";
+      } else {
+        alert("Please install MetaMask!");
+      }
+    };
+
+    async function updateBalance() {
+      const balance = await contract.methods.balanceOf(account).call();
+      const readable = balance / (10 ** decimals);
+      document.getElementById("userBalance").innerText = readable;
     }
-  }
 
-  return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
-      <h1 className="text-2xl font-bold mb-6">Jerry dApp Dashboard</h1>
+    document.getElementById("transfer").onclick = async () => {
+      const to = document.getElementById("recipient").value;
+      const amount = document.getElementById("amount").value;
+      if (!to || !amount) return alert("Fill all fields!");
 
-      {!account ? (
-        <button
-          onClick={connectWallet}
-          className="px-6 py-3 bg-blue-600 text-white rounded-xl"
-        >
-          Connect Wallet
-        </button>
-      ) : (
-        <div className="bg-white shadow-lg rounded-xl p-6 w-96 text-left space-y-3">
-          <p><b>Wallet:</b> {account}</p>
-          <p><b>Total Users:</b> {totalUsers.toString()}</p>
-          <p><b>Total Commissions:</b> {ethers.formatEther(totalCommissions)} ETH</p>
+      const value = BigInt(amount * (10 ** decimals));
 
-          {userInfo && (
-            <div className="mt-4">
-              <h2 className="font-bold">My Info:</h2>
-              <p>Referrer: {userInfo.referrer}</p>
-              <p>Direct Referrals: {userInfo.directReferrals.toString()}</p>
-              <p>Total Earned: {ethers.formatEther(userInfo.totalEarned)} ETH</p>
-              <p>Max Level: {userInfo.maxLevel}</p>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+      try {
+        await contract.methods.transfer(to, value.toString()).send({ from: account });
+        alert("✅ Transfer successful!");
+        updateBalance();
+      } catch (err) {
+        alert("❌ Error: " + err.message);
+      }
+    };
+  </script>
+
+</body>
+</html>

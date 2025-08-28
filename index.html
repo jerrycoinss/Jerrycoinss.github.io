@@ -3,30 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jerry Smart Matrix - Mobile Dashboard</title>
+<title>Jerry Smart Matrix - Ultimate Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.css" rel="stylesheet" />
 <style>
-body { font-family: 'Arial', sans-serif; background: #f9f9f9; padding: 10px; margin: 0;}
-h1, h2 { color: #222; text-align: center; font-size: 1.5em;}
-.card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 0 15px rgba(0,0,0,0.1);}
-button { padding: 12px 25px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em;}
+body { font-family: 'Arial', sans-serif; background: #f9f9f9; padding: 20px; margin: 0;}
+h1, h2 { color: #222; text-align: center; }
+.card { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.1);}
+button { padding: 10px 20px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer;}
 button:hover { background: #45a049; }
-input { padding: 10px; width: 100%; margin-top: 5px; border-radius: 8px; border: 1px solid #ccc; font-size: 1em;}
-#network { height: 500px; border: 1px solid #ccc; border-radius: 8px; background: #fff; }
+input { padding: 8px; width: 250px; margin-top: 5px; border-radius: 6px; border: 1px solid #ccc;}
+#network { height: 600px; border: 1px solid #ccc; border-radius: 8px; background: #fff; }
+#search { width: 200px; margin-bottom: 10px; padding: 6px;}
 .stats-grid { display: flex; flex-wrap: wrap; justify-content: space-around; margin-top: 10px;}
-.stats-box { background: #e3f2fd; padding: 12px; border-radius: 10px; margin: 5px; flex: 1 1 45%; text-align: center; font-size: 0.9em; }
-@media (max-width: 480px){
-    .stats-box { flex: 1 1 100%; }
-    h1, h2 { font-size: 1.3em; }
-    button { width: 100%; }
-}
+.stats-box { background: #e3f2fd; padding: 15px; border-radius: 10px; margin: 5px; flex: 1 1 150px; text-align: center; }
 </style>
 </head>
 <body>
 
-<h1>Jerry Smart Matrix</h1>
+<h1>Jerry Smart Matrix - Ultimate Dashboard</h1>
+
+<!-- زر اتصال MetaMask -->
+<div style="text-align:center; margin-bottom: 20px;">
+    <button onclick="connectMetaMask()">Connect MetaMask</button>
+</div>
 
 <div class="card">
     <h2>General Stats</h2>
@@ -49,14 +50,16 @@ input { padding: 10px; width: 100%; margin-top: 5px; border-radius: 8px; border:
 
 <div class="card">
     <h2>Buy Level</h2>
-    <input type="number" id="level" min="0" max="9" value="0" placeholder="Enter level (0-9)">
-    <input type="text" id="referrer" placeholder="Referrer Address 0x...">
+    <label>Level (0-9):</label><br>
+    <input type="number" id="level" min="0" max="9" value="0"><br>
+    <label>Referrer Address:</label><br>
+    <input type="text" id="referrer" placeholder="0x..."><br>
     <button onclick="buyLevel()">Buy Level</button>
 </div>
 
 <div class="card">
     <h2>Search Member</h2>
-    <input type="text" id="search" placeholder="Enter member address...">
+    <input type="text" id="search" placeholder="Enter address...">
     <button onclick="searchMember()">Search</button>
 </div>
 
@@ -76,9 +79,8 @@ const abi = [
 ];
 
 let provider, signer, contract, networkInstance, nodesDS, edgesDS;
-const levelColors = ["#4CAF50","#66BB6A","#9CCC65","#FFEB3B","#FFC107","#FF9800","#FF5722","#F44336","#E91E63","#9C27B0"];
 
-async function init() {
+async function connectMetaMask() {
     if(window.ethereum){
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
@@ -129,7 +131,7 @@ async function buyLevel(){
 
 async function drawTeamTree(){
     const userAddress = await signer.getAddress();
-    const nodes = [{id: userAddress, label: "You\nLvl: 0\nEarned: 0", color: levelColors[0]}];
+    const nodes = [{id: userAddress, label: "You\nLvl: 0\nEarned: 0", color: "#4CAF50"}];
     const edges = [];
 
     async function addTeamRecursive(address, parentId){
@@ -138,8 +140,7 @@ async function drawTeamTree(){
             for(let i=0;i<userData.team.length;i++){
                 const child = userData.team[i];
                 const childData = await contract.users(child);
-                const level = Math.min(childData.maxLevel, levelColors.length-1);
-                const color = levelColors[level];
+                const color = childData.referrer.toLowerCase() === parentId.toLowerCase() ? "#87CEFA" : "#FFD700";
                 nodes.push({
                     id: child,
                     label: child.substring(0,6)+"...\nLvl:"+childData.maxLevel+"\nEarned:"+ethers.utils.formatUnits(childData.totalEarned,18),
@@ -178,19 +179,5 @@ async function drawTeamTree(){
 async function searchMember(){
     const searchAddr = document.getElementById("search").value.trim();
     if(!searchAddr) return;
-    try{
-        const userData = await contract.users(searchAddr);
-        alert(
-            `Address: ${searchAddr}\nLevel: ${userData.maxLevel}\nEarned: ${ethers.utils.formatUnits(userData.totalEarned,18)} JRY\nDirect Referrals: ${userData.directReferrals}\nTeam Size: ${userData.team.length}`
-        );
-    } catch(err){
-        console.error(err);
-        alert("Member not found or error fetching data.");
-    }
-}
-
-window.addEventListener('load', init);
-</script>
-
-</body>
-</html>
+    const userData = await contract.users(searchAddr);
+    alert(`User: ${searchAddr}\nLevel: ${

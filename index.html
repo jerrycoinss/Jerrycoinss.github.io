@@ -1,33 +1,6 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>واجهة العقد الذكي</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; }
-        button { font-size: 18px; padding: 10px 20px; cursor: pointer; }
-        #dataContainer { margin-top: 30px; font-size: 22px; color: #333; }
-    </style>
-</head>
-<body>
-
-    <h1>مشروعي اللامركزي</h1>
-    <p>اضغط على الزر لربط محفظتك وقراءة البيانات من العقد.</p>
-
-    <button id="connectButton">🔗 ربط المحفظة</button>
-
-    <div id="dataContainer"></div>
-
-    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"
-            type="application/javascript"></script>
-
-    <script>
+<script>
         // --- الإعدادات الأساسية ---
         const contractAddress = "0x5aF2Ec60b61061202Fa6907EaEd309284F587C5b";
-
-        // ABI: واجهة التطبيق الثنائية. هي "قائمة الأوامر" التي يفهمها العقد.
-        // نضع فقط الدالة التي نريد استخدامها الآن.
         const contractABI = [
             "function levelPrice(uint256) view returns (uint256)"
         ];
@@ -45,21 +18,21 @@
         async function connectWallet() {
             if (typeof window.ethereum !== 'undefined') {
                 try {
-                    // طلب ربط حسابات ميتاماسك
                     await window.ethereum.request({ method: 'eth_requestAccounts' });
                     
-                    // بعد الربط، نقوم بإعداد كل شيء
+                    // -- السطر الذي تم تصحيحه --
                     provider = new ethers.providers.Web3Provider(window.ethereum);
+                    // -------------------------
+
                     contract = new ethers.Contract(contractAddress, contractABI, provider);
                     
                     connectButton.textContent = "✅ تم الربط بنجاح";
                     console.log("Wallet connected!");
 
-                    // استدعاء دالة قراءة البيانات
                     await readContractData();
 
                 } catch (error) {
-                    console.error("User rejected request:", error);
+                    console.error("User rejected request or error occurred:", error);
                     connectButton.textContent = "فشل الربط";
                 }
             } else {
@@ -71,13 +44,9 @@
         // دالة لقراءة سعر المستوى الأول
         async function readContractData() {
             try {
-                // استدعاء دالة levelPrice من العقد للمستوى 1
                 const priceBigNumber = await contract.levelPrice(1);
-                
-                // سعر العملة يأتي كرقم ضخم بـ 18 صفر (Wei). نحوله إلى رقم عادي.
                 const priceFormatted = ethers.utils.formatEther(priceBigNumber);
 
-                // عرض النتيجة على الصفحة
                 dataContainer.innerHTML = `سعر المستوى الأول هو: <strong>${priceFormatted} JERRY</strong>`;
                 console.log("Level 1 Price:", priceFormatted);
 
@@ -89,7 +58,4 @@
 
         // --- ربط الدالة بالزر ---
         connectButton.addEventListener('click', connectWallet);
-
-    </script>
-</body>
-</html>
+</script>

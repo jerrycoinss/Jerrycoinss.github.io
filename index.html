@@ -1,226 +1,196 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Jerry Token Sale - DApp</title>
-
-  <!-- ethers v6 UMD -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
-
-  <style>
-    body { font-family: Inter, system-ui, Arial; background:#f3f4f6; margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; }
-    .card { width: 360px; background:#fff; border-radius:16px; padding:20px; box-shadow: 0 8px 30px rgba(2,6,23,0.08); }
-    h1{ font-size:20px; margin:0 0 12px; text-align:center; }
-    .muted{ color:#6b7280; font-size:13px; }
-    .row{ margin:10px 0; }
-    input[type="number"]{ width:100%; padding:10px; border-radius:8px; border:1px solid #e5e7eb; font-size:15px; }
-    button{ width:100%; padding:10px; border-radius:10px; border:0; font-weight:600; cursor:pointer; }
-    .btn-connect{ background:#2563eb; color:white; }
-    .btn-buy{ background:#16a34a; color:white; }
-    .small{ font-size:13px; color:#374151; }
-    .error{ color:#b91c1c; font-size:13px; margin-top:8px; }
-    .success{ color:#059669; font-size:13px; margin-top:8px; }
-    .info{ color:#0f172a; font-size:13px; margin-top:8px; }
-    .flex-between{ display:flex; justify-content:space-between; align-items:center; }
-    .address{ font-size:12px; color:#111827; word-break:break-all; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jerry Smart Matrix - Mobile Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.css" rel="stylesheet" />
+<style>
+body { font-family: 'Arial', sans-serif; background: #f9f9f9; padding: 10px; margin: 0;}
+h1, h2 { color: #222; text-align: center; font-size: 1.5em;}
+.card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 0 15px rgba(0,0,0,0.1);}
+button { padding: 12px 25px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em;}
+button:hover { background: #45a049; }
+input { padding: 10px; width: 100%; margin-top: 5px; border-radius: 8px; border: 1px solid #ccc; font-size: 1em;}
+#network { height: 500px; border: 1px solid #ccc; border-radius: 8px; background: #fff; }
+.stats-grid { display: flex; flex-wrap: wrap; justify-content: space-around; margin-top: 10px;}
+.stats-box { background: #e3f2fd; padding: 12px; border-radius: 10px; margin: 5px; flex: 1 1 45%; text-align: center; font-size: 0.9em; }
+@media (max-width: 480px){
+    .stats-box { flex: 1 1 100%; }
+    h1, h2 { font-size: 1.3em; }
+    button { width: 100%; }
+}
+</style>
 </head>
 <body>
-  <div class="card">
-    <h1>Jerry Token Sale</h1>
-    <p class="muted" style="text-align:center">Buy <strong>JRY</strong> with <strong>USDT</strong> — Fixed rate: <strong>1 USDT = 20,000 JRY</strong></p>
 
-    <div id="notInstalled" style="display:none" class="row error">MetaMask / Web3 provider not found. نصب MetaMask أو محفظة تدعم EIP-1193.</div>
+<h1>Jerry Smart Matrix</h1>
 
-    <div id="preConnect" class="row">
-      <button id="connectBtn" class="btn-connect">Connect Wallet</button>
-      <p class="muted" style="text-align:center;margin-top:8px">Network: BNB Smart Chain (recommended)</p>
+<div class="card">
+    <h2>General Stats</h2>
+    <div class="stats-grid">
+        <div class="stats-box">Total Users: <span id="totalUsers">0</span></div>
+        <div class="stats-box">Total Commissions: <span id="totalCommissions">0</span> JRY</div>
     </div>
+    <button onclick="updateStats()">Refresh Stats</button>
+</div>
 
-    <div id="afterConnect" style="display:none">
-      <div class="row flex-between">
-        <div>
-          <div class="small">Connected</div>
-          <div id="account" class="address"></div>
-        </div>
-        <div style="text-align:right">
-          <div class="small">Remaining JRY</div>
-          <div id="remaining" class="address">--</div>
-        </div>
-      </div>
-
-      <div class="row">
-        <input id="usdtAmount" type="number" min="0" step="any" placeholder="Enter USDT amount (e.g. 1.5)" />
-      </div>
-
-      <div class="row flex-between">
-        <div class="small">You will get</div>
-        <div id="jryAmount" class="small"><strong>0 JRY</strong></div>
-      </div>
-
-      <div class="row">
-        <button id="approveBtn" style="display:none" class="btn-connect">Approve USDT (if needed)</button>
-        <button id="buyBtn" class="btn-buy">Buy JRY</button>
-      </div>
-
-      <div id="status" class="info" style="display:none"></div>
-      <div id="err" class="error" style="display:none"></div>
-      <div id="ok" class="success" style="display:none"></div>
+<div class="card">
+    <h2>Member Dashboard</h2>
+    <div class="stats-grid">
+        <div class="stats-box">Your Level: <span id="myLevel">0</span></div>
+        <div class="stats-box">Your Earnings: <span id="myEarnings">0</span> JRY</div>
+        <div class="stats-box">Direct Referrals: <span id="myDirects">0</span></div>
+        <div class="stats-box">Team Size: <span id="myTeamSize">0</span></div>
     </div>
-  </div>
+</div>
 
-  <script>
-    (function(){
-      // ====== CONFIG ======
-      const CONTRACT_ADDRESS = "0x8e8cF4ac64e1C39A96A70C5900583FA402Cb6Be2";
-      const RATE = 20000; // 1 USDT = 20,000 JRY
-      const JRY_DECIMALS = 18;
-      const USDT_DECIMALS = 18;
+<div class="card">
+    <h2>Buy Level</h2>
+    <input type="number" id="level" min="0" max="9" value="0" placeholder="Enter level (0-9)">
+    <input type="text" id="referrer" placeholder="Referrer Address 0x...">
+    <button onclick="buyLevel()">Buy Level</button>
+</div>
 
-      // ABI minimal
-      const CONTRACT_ABI = [
-        "function buy(uint256 usdtAmount) external",
-        "function remaining() view returns (uint256)",
-        "event Bought(address indexed buyer, uint256 usdtIn, uint256 jryOut)"
-      ];
+<div class="card">
+    <h2>Search Member</h2>
+    <input type="text" id="search" placeholder="Enter member address...">
+    <button onclick="searchMember()">Search</button>
+</div>
 
-      // Elements
-      const connectBtn = document.getElementById("connectBtn");
-      const preConnect = document.getElementById("preConnect");
-      const afterConnect = document.getElementById("afterConnect");
-      const notInstalled = document.getElementById("notInstalled");
-      const accountEl = document.getElementById("account");
-      const remainingEl = document.getElementById("remaining");
-      const usdtInput = document.getElementById("usdtAmount");
-      const jryAmountEl = document.getElementById("jryAmount");
-      const buyBtn = document.getElementById("buyBtn");
-      const statusEl = document.getElementById("status");
-      const errEl = document.getElementById("err");
-      const okEl = document.getElementById("ok");
+<div class="card">
+    <h2>Your Team Tree</h2>
+    <div id="network"></div>
+</div>
 
-      // web3
-      let provider, signer, account, contract;
+<script>
+const contractAddress = "0x33c847a9954f5FcB8a5cf32Bbbc3dDD56Bb80730";
+const abi = [
+    "function totalUsers() view returns (uint256)",
+    "function totalCommissions() view returns (uint256)",
+    "function users(address) view returns (address referrer, uint256 directReferrals, uint256 totalEarned, uint8 maxLevel, address[] team)",
+    "function buyLevel(uint8 _level, address _referrer)",
+    "function _findAvailableReferrer(address _ref) view returns(address)"
+];
 
-      function showError(msg){
-        errEl.style.display = "block"; errEl.innerText = msg;
-        okEl.style.display = "none";
-        statusEl.style.display = "none";
-      }
-      function showStatus(msg){
-        statusEl.style.display = "block"; statusEl.innerText = msg;
-        errEl.style.display = "none";
-        okEl.style.display = "none";
-      }
-      function showOk(msg){
-        okEl.style.display = "block"; okEl.innerText = msg;
-        statusEl.style.display = "none";
-        errEl.style.display = "none";
-      }
+let provider, signer, contract, networkInstance, nodesDS, edgesDS;
+const levelColors = ["#4CAF50","#66BB6A","#9CCC65","#FFEB3B","#FFC107","#FF9800","#FF5722","#F44336","#E91E63","#9C27B0"];
 
-      // detect provider
-      if (!window.ethereum) {
-        notInstalled.style.display = "block";
-        preConnect.style.display = "none";
-      }
+async function init() {
+    if(window.ethereum){
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        contract = new ethers.Contract(contractAddress, abi, signer);
+        updateStats();
+        drawMemberDashboard();
+        drawTeamTree();
+        setInterval(updateStats, 10000);
+        setInterval(drawMemberDashboard, 10000);
+        setInterval(drawTeamTree, 10000);
+    } else {
+        alert("Please install MetaMask!");
+    }
+}
 
-      connectBtn.addEventListener("click", async () => {
-        try {
-          if (!window.ethereum) { notInstalled.style.display = "block"; return; }
-          // request accounts
-          provider = new ethers.BrowserProvider(window.ethereum);
-          await provider.send("eth_requestAccounts", []);
-          signer = await provider.getSigner();
-          account = await signer.getAddress();
-          accountEl.innerText = account;
+async function updateStats(){
+    const totalUsers = await contract.totalUsers();
+    const totalCommissions = await contract.totalCommissions();
+    document.getElementById("totalUsers").innerText = totalUsers.toString();
+    document.getElementById("totalCommissions").innerText = ethers.utils.formatUnits(totalCommissions, 18);
+}
 
-          // init contract
-          contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+async function drawMemberDashboard(){
+    const userAddress = await signer.getAddress();
+    const userData = await contract.users(userAddress);
+    document.getElementById("myLevel").innerText = userData.maxLevel;
+    document.getElementById("myEarnings").innerText = ethers.utils.formatUnits(userData.totalEarned,18);
+    document.getElementById("myDirects").innerText = userData.directReferrals;
+    document.getElementById("myTeamSize").innerText = userData.team.length;
+}
 
-          preConnect.style.display = "none";
-          afterConnect.style.display = "block";
+async function buyLevel(){
+    const level = parseInt(document.getElementById("level").value);
+    const referrer = document.getElementById("referrer").value;
+    try{
+        const tx = await contract.buyLevel(level, referrer);
+        await tx.wait();
+        alert("Level purchased successfully!");
+        updateStats();
+        drawMemberDashboard();
+        drawTeamTree();
+    } catch(err){
+        console.error(err);
+        alert("Transaction failed: " + err.message);
+    }
+}
 
-          // fetch remaining
-          await fetchRemaining();
-          listenEvents();
-          showStatus("Wallet connected.");
-        } catch (e) {
-          console.error(e);
-          showError("فشل الاتصال بالمحفظة. شوف الكونسول للمزيد.");
-        }
-      });
+async function drawTeamTree(){
+    const userAddress = await signer.getAddress();
+    const nodes = [{id: userAddress, label: "You\nLvl: 0\nEarned: 0", color: levelColors[0]}];
+    const edges = [];
 
-      usdtInput.addEventListener("input", () => {
-        const v = parseFloat(usdtInput.value);
-        if (!v || v <= 0) {
-          jryAmountEl.innerHTML = "<strong>0 JRY</strong>";
-          return;
-        }
-        const jry = (v * RATE);
-        jryAmountEl.innerHTML = "<strong>" + Number(jry).toLocaleString() + " JRY</strong>";
-      });
-
-      buyBtn.addEventListener("click", async () => {
-        errEl.style.display = "none"; okEl.style.display = "none";
-        const v = parseFloat(usdtInput.value);
-        if (!v || v <= 0) return showError("دخل قيمة USDT صحيحة.");
-        if (!contract) return showError("العقد مازال ما تربطش.");
-
-        try {
-          showStatus("تحضير المعاملة... تأكد من محفظتك.");
-          const amount = ethers.parseUnits(v.toString(), USDT_DECIMALS); // requires ethers v6
-
-          // call buy
-          const tx = await contract.buy(amount);
-          showStatus("معاملة مرسلة... تنتظر التأكيد (1/2) TxHash: " + tx.hash);
-          await tx.wait();
-          showOk("شراء تم بنجاح ✅");
-          await fetchRemaining();
-        } catch (e) {
-          console.error(e);
-          const msg = (e && e.message) ? e.message : "Transaction failed";
-          showError("فشل المعاملة: " + msg);
-        }
-      });
-
-      async function fetchRemaining(){
-        try {
-          if (!contract) return;
-          const rem = await contract.remaining();
-          // rem is BigInt or ethers BigNumber-like; format with ethers.formatUnits
-          const human = ethers.formatUnits(rem, JRY_DECIMALS);
-          remainingEl.innerText = Number(human).toLocaleString();
-        } catch (e) {
-          console.error(e);
-          remainingEl.innerText = "--";
-        }
-      }
-
-      function listenEvents(){
-        try {
-          if (!contract) return;
-          // Listen to Bought events to update UI in real-time
-          contract.on("Bought", (buyer, usdtIn, jryOut) => {
-            // only show when relevant or update remaining
-            fetchRemaining();
-            // optional: notify if current user bought
-            if (buyer && account && buyer.toLowerCase() === account.toLowerCase()) {
-              showOk("تم شراء JRY! المبلغ: " + ethers.formatUnits(jryOut, JRY_DECIMALS) + " JRY");
+    async function addTeamRecursive(address, parentId){
+        const userData = await contract.users(address);
+        if(userData.team){
+            for(let i=0;i<userData.team.length;i++){
+                const child = userData.team[i];
+                const childData = await contract.users(child);
+                const level = Math.min(childData.maxLevel, levelColors.length-1);
+                const color = levelColors[level];
+                nodes.push({
+                    id: child,
+                    label: child.substring(0,6)+"...\nLvl:"+childData.maxLevel+"\nEarned:"+ethers.utils.formatUnits(childData.totalEarned,18),
+                    color: color,
+                    title: `Address: ${child}\nLevel: ${childData.maxLevel}\nEarned: ${ethers.utils.formatUnits(childData.totalEarned,18)} JRY\nDirect: ${childData.directReferrals}`
+                });
+                edges.push({from: parentId, to: child});
+                await addTeamRecursive(child, child);
             }
-          });
-        } catch (e) {
-          console.error("listenEvents error", e);
         }
-      }
+    }
 
-      // Cleanup on page unload
-      window.addEventListener("beforeunload", () => {
-        try {
-          if (contract && contract.off) contract.removeAllListeners("Bought");
-        } catch {}
-      });
+    await addTeamRecursive(userAddress, userAddress);
 
-    })();
-  </script>
+    const container = document.getElementById("network");
+    const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+    const options = {
+        nodes: { shape: "box", font: {multi: "html"} },
+        edges: { arrows: "to" },
+        layout: { hierarchical: { direction: "UD", sortMethod: "directed" } },
+        physics: { enabled: false },
+        interaction: { hover: true, navigationButtons: true, keyboard: true }
+    };
+    if(!networkInstance){
+        networkInstance = new vis.Network(container, data, options);
+        nodesDS = data.nodes;
+        edgesDS = data.edges;
+    } else {
+        nodesDS.clear();
+        edgesDS.clear();
+        nodesDS.add(nodes);
+        edgesDS.add(edges);
+    }
+}
+
+async function searchMember(){
+    const searchAddr = document.getElementById("search").value.trim();
+    if(!searchAddr) return;
+    try{
+        const userData = await contract.users(searchAddr);
+        alert(
+            `Address: ${searchAddr}\nLevel: ${userData.maxLevel}\nEarned: ${ethers.utils.formatUnits(userData.totalEarned,18)} JRY\nDirect Referrals: ${userData.directReferrals}\nTeam Size: ${userData.team.length}`
+        );
+    } catch(err){
+        console.error(err);
+        alert("Member not found or error fetching data.");
+    }
+}
+
+window.addEventListener('load', init);
+</script>
+
 </body>
 </html>

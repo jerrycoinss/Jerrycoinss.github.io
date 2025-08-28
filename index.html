@@ -1,95 +1,95 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jerry Smart Matrix Free</title>
-
-<!-- Web3.js -->
-<script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
-<!-- WalletConnect v1.8 -->
-<script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-
-<style>
-body { font-family: Arial; margin: 20px; }
-button { padding: 10px 20px; margin: 5px; cursor: pointer; }
-input, select { padding: 5px; margin: 5px; width: 300px; max-width: 100%; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>واجهة العقد الذكي</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; }
+        button { font-size: 18px; padding: 10px 20px; cursor: pointer; }
+        #dataContainer { margin-top: 30px; font-size: 22px; color: #333; }
+    </style>
 </head>
 <body>
-<h1>Jerry Smart Matrix Free</h1>
 
-<button id="connectWallet">Connect Wallet</button><br><br>
+    <h1>مشروعي اللامركزي</h1>
+    <p>اضغط على الزر لربط محفظتك وقراءة البيانات من العقد.</p>
 
-<select id="levelSelect">
-<option value="1">Level 1</option>
-<option value="2">Level 2</option>
-<option value="3">Level 3</option>
-<option value="4">Level 4</option>
-<option value="5">Level 5</option>
-<option value="6">Level 6</option>
-<option value="7">Level 7</option>
-<option value="8">Level 8</option>
-<option value="9">Level 9</option>
-<option value="10">Level 10</option>
-<option value="11">Level 11</option>
-</select><br>
+    <button id="connectButton">🔗 ربط المحفظة</button>
 
-<input type="text" id="referrer" placeholder="Referrer Address"><br>
-<button id="buyLevel">Buy Level</button>
+    <div id="dataContainer"></div>
 
-<script>
-let web3;
-let contract;
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS"; // استبدل بالعقد الخاص بك
-const ABI = [ /* ضع ABI الخاص بالعقد هنا */ ];
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"
+            type="application/javascript"></script>
 
-async function connectWallet() {
-    // MetaMask
-    if (window.ethereum) {
-        web3 = new Web3(window.ethereum);
-        try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-        } catch (err) {
-            alert("User denied MetaMask access");
-            return;
+    <script>
+        // --- الإعدادات الأساسية ---
+        const contractAddress = "0x5aF2Ec60b61061202Fa6907EaEd309284F587C5b";
+
+        // ABI: واجهة التطبيق الثنائية. هي "قائمة الأوامر" التي يفهمها العقد.
+        // نضع فقط الدالة التي نريد استخدامها الآن.
+        const contractABI = [
+            "function levelPrice(uint256) view returns (uint256)"
+        ];
+
+        // --- الوصول لعناصر الصفحة ---
+        const connectButton = document.getElementById('connectButton');
+        const dataContainer = document.getElementById('dataContainer');
+        
+        let provider;
+        let contract;
+
+        // --- الدوال الرئيسية ---
+
+        // دالة لربط المحفظة
+        async function connectWallet() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    // طلب ربط حسابات ميتاماسك
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    // بعد الربط، نقوم بإعداد كل شيء
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    contract = new ethers.Contract(contractAddress, contractABI, provider);
+                    
+                    connectButton.textContent = "✅ تم الربط بنجاح";
+                    console.log("Wallet connected!");
+
+                    // استدعاء دالة قراءة البيانات
+                    await readContractData();
+
+                } catch (error) {
+                    console.error("User rejected request:", error);
+                    connectButton.textContent = "فشل الربط";
+                }
+            } else {
+                alert("الرجاء تثبيت MetaMask!");
+                connectButton.textContent = "MetaMask غير موجود";
+            }
         }
-    } 
-    // Legacy dapp browsers
-    else if (window.web3) {
-        web3 = new Web3(window.web3.currentProvider);
-    } 
-    else {
-        // WalletConnect
-        const provider = new WalletConnectProvider.default({
-            rpc: { 56: "https://bsc-dataseed.binance.org/" }
-        });
-        await provider.enable();
-        web3 = new Web3(provider);
-    }
 
-    contract = new web3.eth.Contract(ABI, CONTRACT_ADDRESS);
-    alert("Wallet Connected!");
-}
+        // دالة لقراءة سعر المستوى الأول
+        async function readContractData() {
+            try {
+                // استدعاء دالة levelPrice من العقد للمستوى 1
+                const priceBigNumber = await contract.levelPrice(1);
+                
+                // سعر العملة يأتي كرقم ضخم بـ 18 صفر (Wei). نحوله إلى رقم عادي.
+                const priceFormatted = ethers.utils.formatEther(priceBigNumber);
 
-document.getElementById("connectWallet").onclick = connectWallet;
+                // عرض النتيجة على الصفحة
+                dataContainer.innerHTML = `سعر المستوى الأول هو: <strong>${priceFormatted} JERRY</strong>`;
+                console.log("Level 1 Price:", priceFormatted);
 
-document.getElementById("buyLevel").onclick = async () => {
-    if (!web3) {
-        alert("Please connect your wallet first");
-        return;
-    }
-    const accounts = await web3.eth.getAccounts();
-    const level = document.getElementById("levelSelect").value;
-    const referrer = document.getElementById("referrer").value || "0x0000000000000000000000000000000000000000";
+            } catch (error) {
+                console.error("Could not fetch level price:", error);
+                dataContainer.textContent = "حدث خطأ أثناء قراءة البيانات.";
+            }
+        }
 
-    try {
-        await contract.methods.buyLevel(level, referrer).send({ from: accounts[0] });
-        alert("Level Purchased!");
-    } catch (error) {
-        alert("Transaction failed: " + error.message);
-    }
-};
-</script>
+        // --- ربط الدالة بالزر ---
+        connectButton.addEventListener('click', connectWallet);
+
+    </script>
 </body>
 </html>

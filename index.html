@@ -4,16 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jerry Smart Matrix Free</title>
+
+<!-- Web3.js -->
 <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+<!-- WalletConnect v1.8 -->
 <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+
 <style>
 body { font-family: Arial; margin: 20px; }
-button { padding: 10px 20px; margin: 5px; }
+button { padding: 10px 20px; margin: 5px; cursor: pointer; }
 input, select { padding: 5px; margin: 5px; width: 300px; max-width: 100%; }
 </style>
 </head>
 <body>
 <h1>Jerry Smart Matrix Free</h1>
+
 <button id="connectWallet">Connect Wallet</button><br><br>
 
 <select id="levelSelect">
@@ -40,16 +45,21 @@ const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS"; // استبدل بالعقد �
 const ABI = [ /* ضع ABI الخاص بالعقد هنا */ ];
 
 async function connectWallet() {
+    // MetaMask
     if (window.ethereum) {
-        // MetaMask
         web3 = new Web3(window.ethereum);
         try {
             await window.ethereum.request({ method: 'eth_requestAccounts' });
-        } catch (error) {
+        } catch (err) {
             alert("User denied MetaMask access");
             return;
         }
-    } else {
+    } 
+    // Legacy dapp browsers
+    else if (window.web3) {
+        web3 = new Web3(window.web3.currentProvider);
+    } 
+    else {
         // WalletConnect
         const provider = new WalletConnectProvider.default({
             rpc: { 56: "https://bsc-dataseed.binance.org/" }

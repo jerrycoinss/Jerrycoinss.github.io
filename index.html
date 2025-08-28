@@ -3,31 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jerry Smart Matrix - Dashboard</title>
+<title>Jerry Smart Matrix - DApp Dashboard</title>
+
+<!-- Ethers.js for blockchain interaction -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+
+<!-- vis-network for team tree -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.css" rel="stylesheet" />
+
 <style>
-body { font-family: 'Arial', sans-serif; background: #f9f9f9; padding: 20px; margin: 0;}
-h1, h2 { color: #222; text-align: center; }
-.card { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.1);}
-button { padding: 10px 20px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer;}
-button:hover { background: #45a049; }
-input { padding: 8px; width: 250px; margin-top: 5px; border-radius: 6px; border: 1px solid #ccc;}
-#network { height: 600px; border: 1px solid #ccc; border-radius: 8px; background: #fff; }
-#search { width: 200px; margin-bottom: 10px; padding: 6px;}
-.stats-grid { display: flex; flex-wrap: wrap; justify-content: space-around; margin-top: 10px;}
-.stats-box { background: #e3f2fd; padding: 15px; border-radius: 10px; margin: 5px; flex: 1 1 150px; text-align: center; }
+body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; margin:0; }
+h1, h2 { text-align: center; color: #222; }
+.card { background: #fff; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow:0 0 20px rgba(0,0,0,0.1);}
+button { padding:10px 20px; background:#4CAF50; color:white; border:none; border-radius:8px; cursor:pointer; margin-top:5px;}
+button:hover { background:#45a049; }
+input { padding:8px; width:250px; margin-top:5px; border-radius:6px; border:1px solid #ccc; }
+#network { height:500px; border:1px solid #ccc; border-radius:8px; background:#fff; }
+.stats-grid { display:flex; flex-wrap:wrap; justify-content:space-around; margin-top:10px;}
+.stats-box { background:#e3f2fd; padding:15px; border-radius:10px; margin:5px; flex:1 1 150px; text-align:center; }
 </style>
 </head>
-<body>
 
-<h1>Jerry Smart Matrix - Dashboard</h1>
+<body>
+<h1>Jerry Smart Matrix - DApp Dashboard</h1>
 
 <div class="card">
-    <h2>Wallet Connection</h2>
     <button onclick="connectWallet()">Connect Wallet</button>
-    <p id="walletAddress">Not connected</p>
+    <p id="walletAddress"></p>
 </div>
 
 <div class="card">
@@ -74,26 +77,29 @@ const contractAddress = "0x33c847a9954f5FcB8a5cf32Bbbc3dDD56Bb80730";
 const abi = [
     "function totalUsers() view returns (uint256)",
     "function totalCommissions() view returns (uint256)",
-    "function users(address) view returns (address referrer, uint256 directReferrals, uint256 totalEarned, uint8 maxLevel, address[] team)",
-    "function buyLevel(uint8 _level, address _referrer)",
-    "function _findAvailableReferrer(address _ref) view returns(address)"
+    "function users(address) view returns (address referrer,uint256 directReferrals,uint256 totalEarned,uint8 maxLevel,address[] team)",
+    "function buyLevel(uint8,address)",
+    "function _findAvailableReferrer(address) view returns(address)"
 ];
 
-let provider, signer, contract, networkInstance, nodesDS, edgesDS;
+let provider, signer, contract, networkInstance, nodesDS, edgesDS, userAddress;
 
 async function connectWallet(){
     if(window.ethereum){
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        document.getElementById("walletAddress").innerText = "Connected: " + userAddress;
         contract = new ethers.Contract(contractAddress, abi, signer);
-        const addr = await signer.getAddress();
-        document.getElementById("walletAddress").innerText = "Connected: " + addr;
         updateStats();
         drawMemberDashboard();
         drawTeamTree();
+        setInterval(updateStats, 10000);
+        setInterval(drawMemberDashboard, 10000);
+        setInterval(drawTeamTree, 10000);
     } else {
-        alert("Please install MetaMask!");
+        alert("Install MetaMask or compatible wallet!");
     }
 }
 
@@ -102,12 +108,11 @@ async function updateStats(){
     const totalUsers = await contract.totalUsers();
     const totalCommissions = await contract.totalCommissions();
     document.getElementById("totalUsers").innerText = totalUsers.toString();
-    document.getElementById("totalCommissions").innerText = ethers.utils.formatUnits(totalCommissions, 18);
+    document.getElementById("totalCommissions").innerText = ethers.utils.formatUnits(totalCommissions,18);
 }
 
 async function drawMemberDashboard(){
-    if(!contract) return;
-    const userAddress = await signer.getAddress();
+    if(!contract || !userAddress) return;
     const userData = await contract.users(userAddress);
     document.getElementById("myLevel").innerText = userData.maxLevel;
     document.getElementById("myEarnings").innerText = ethers.utils.formatUnits(userData.totalEarned,18);
@@ -116,13 +121,13 @@ async function drawMemberDashboard(){
 }
 
 async function buyLevel(){
-    if(!contract) return;
+    if(!contract || !userAddress) return;
     const level = parseInt(document.getElementById("level").value);
     const referrer = document.getElementById("referrer").value;
     try{
         const tx = await contract.buyLevel(level, referrer);
         await tx.wait();
-        alert("Level purchased successfully!");
+        alert("Level purchased!");
         updateStats();
         drawMemberDashboard();
         drawTeamTree();
@@ -133,43 +138,39 @@ async function buyLevel(){
 }
 
 async function drawTeamTree(){
-    if(!contract) return;
-    const userAddress = await signer.getAddress();
-    const nodes = [{id: userAddress, label: "You\nLvl: 0\nEarned: 0", color: "#4CAF50"}];
+    if(!contract || !userAddress) return;
+    const nodes = [{id:userAddress,label:"You\nLvl:0\nEarned:0",color:"#4CAF50"}];
     const edges = [];
 
-    async function addTeamRecursive(address, parentId){
-        const userData = await contract.users(address);
-        if(userData.team){
-            for(let i=0;i<userData.team.length;i++){
-                const child = userData.team[i];
-                const childData = await contract.users(child);
-                const color = childData.referrer.toLowerCase() === parentId.toLowerCase() ? "#87CEFA" : "#FFD700";
+    async function addTeamRecursive(addr,parent){
+        const data = await contract.users(addr);
+        if(data.team){
+            for(let child of data.team){
+                const cData = await contract.users(child);
                 nodes.push({
-                    id: child,
-                    label: child.substring(0,6)+"...\nLvl:"+childData.maxLevel+"\nEarned:"+ethers.utils.formatUnits(childData.totalEarned,18),
-                    color: color,
-                    title: `Address: ${child}\nLevel: ${childData.maxLevel}\nEarned: ${ethers.utils.formatUnits(childData.totalEarned,18)} JRY\nDirect: ${childData.directReferrals}`
+                    id:child,
+                    label: child.substring(0,6)+"...\nLvl:"+cData.maxLevel+"\nEarned:"+ethers.utils.formatUnits(cData.totalEarned,18),
+                    color:"#87CEFA"
                 });
-                edges.push({from: parentId, to: child});
-                await addTeamRecursive(child, child);
+                edges.push({from:parent,to:child});
+                await addTeamRecursive(child,child);
             }
         }
     }
 
-    await addTeamRecursive(userAddress, userAddress);
+    await addTeamRecursive(userAddress,userAddress);
 
     const container = document.getElementById("network");
     const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
     const options = {
-        nodes: { shape: "box", font: {multi: "html"} },
-        edges: { arrows: "to" },
-        layout: { hierarchical: { direction: "UD", sortMethod: "directed" } },
-        physics: { enabled: false },
-        interaction: { hover: true, navigationButtons: true, keyboard: true }
+        nodes:{shape:"box", font:{multi:"html"}},
+        edges:{arrows:"to"},
+        layout:{hierarchical:{direction:"UD",sortMethod:"directed"}},
+        physics:{enabled:false},
+        interaction:{hover:true, navigationButtons:true, keyboard:true}
     };
     if(!networkInstance){
-        networkInstance = new vis.Network(container, data, options);
+        networkInstance = new vis.Network(container,data,options);
         nodesDS = data.nodes;
         edgesDS = data.edges;
     } else {
@@ -181,18 +182,12 @@ async function drawTeamTree(){
 }
 
 async function searchMember(){
-    if(!contract) return;
     const searchAddr = document.getElementById("search").value.trim();
-    if(!searchAddr) return;
-    try{
-        const userData = await contract.users(searchAddr);
-        alert(`Referrer: ${userData.referrer}\nLevel: ${userData.maxLevel}\nEarned: ${ethers.utils.formatUnits(userData.totalEarned,18)} JRY\nDirects: ${userData.directReferrals}\nTeam size: ${userData.team.length}`);
-    } catch(err){
-        console.error(err);
-        alert("Member not found or invalid address");
-    }
+    if(!searchAddr || !contract) return;
+    const data = await contract.users(searchAddr);
+    alert(`Address: ${searchAddr}\nLevel: ${data.maxLevel}\nEarned: ${ethers.utils.formatUnits(data.totalEarned,18)} JRY\nDirects: ${data.directReferrals}\nTeam size: ${data.team.length}`);
 }
-
 </script>
+
 </body>
 </html>

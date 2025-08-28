@@ -1,61 +1,92 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Jerry Smart Matrix Dashboard</title>
-
-<!-- Web3 -->
-<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-<!-- Vis Network -->
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Jerry Smart Matrix - DApp (Auto-Approve)</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.css" rel="stylesheet" />
-
 <style>
-body { font-family: Arial; text-align: center; background: linear-gradient(135deg,#0f2027,#203a43,#2c5364); color: white; padding: 30px; }
-h1 { margin-bottom: 20px; }
-button { padding: 12px 25px; font-size: 1rem; border: none; border-radius: 10px; cursor: pointer; background: #00c6ff; color: black; margin:5px;}
-button:hover { background:#0072ff; color:white;}
-.info { margin: 15px; font-size:1.1rem;}
-input { padding:6px; border-radius:6px; width:250px;}
-#network { width: 100%; height: 500px; border: 1px solid #ccc; background: #fff; margin-top:20px; border-radius:10px;}
+  body{font-family:Arial,Helvetica,sans-serif;background:#071224;color:#fff;padding:18px}
+  .wrap{max-width:980px;margin:0 auto}
+  h1{ text-align:center }
+  .card{background:#071b2a;padding:14px;border-radius:10px;margin:12px 0}
+  button{padding:10px 14px;border-radius:8px;border:0;background:#0ab;cursor:pointer;color:#002}
+  button.secondary{background:#33a;}
+  input{padding:8px;border-radius:8px;border:1px solid #123;background:#05101a;color:#fff;width:100%}
+  .levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}
+  .level-card{background:#042032;padding:10px;border-radius:8px}
+  #network{height:380px;background:#fff;border-radius:8px;margin-top:10px}
+  .muted{color:#9fb0c4}
 </style>
 </head>
 <body>
+<div class="wrap">
+  <h1>Jerry Smart Matrix — DApp</h1>
 
-<h1>🚀 Jerry Smart Matrix</h1>
+  <div class="card">
+    <div style="display:flex;gap:12px;align-items:center">
+      <button id="btnConnect">Connect Wallet</button>
+      <div>
+        <div id="addr" class="muted">Not connected</div>
+        <div id="net" class="muted"></div>
+      </div>
+      <div style="margin-left:auto">
+        <button id="btnRefresh" class="secondary">Refresh</button>
+      </div>
+    </div>
+  </div>
 
-<button onclick="connectWallet()">🔗 Connect Wallet</button>
-<p id="wallet-address"></p>
+  <div class="card">
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div class="muted">Total Users: <strong id="totalUsers">-</strong></div>
+      <div class="muted">Total Commissions: <strong id="totalCommissions">-</strong></div>
+      <div class="muted">JRY Token: <strong id="tokenAddr">-</strong></div>
+    </div>
+  </div>
 
-<div class="info">
-  <p>Total Users: <span id="totalUsers">0</span></p>
-  <p>Total Commissions: <span id="totalCommissions">0</span> JRY</p>
+  <div class="card">
+    <h3>Your Dashboard</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div class="muted">Level: <strong id="myLevel">-</strong></div>
+      <div class="muted">Earnings: <strong id="myEarnings">-</strong></div>
+      <div class="muted">Directs: <strong id="myDirects">-</strong></div>
+      <div class="muted">Team: <strong id="myTeamSize">-</strong></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Buy Levels (Auto-approve)</h3>
+    <div id="levelsContainer" class="levels">Loading...</div>
+  </div>
+
+  <div class="card">
+    <h3>Search Member</h3>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="searchInput" placeholder="0x..." />
+      <button id="searchBtn">Search</button>
+    </div>
+    <div id="searchRes" class="muted" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h3>Your Team Tree</h3>
+    <div id="network"></div>
+  </div>
+
+  <div class="muted" style="text-align:center;margin-top:12px">
+    Open inside MetaMask Mobile browser or desktop with MetaMask. Network: BSC mainnet.
+  </div>
 </div>
-
-<div class="info">
-  <p>Your Level: <span id="myLevel">0</span></p>
-  <p>Your Earnings: <span id="myEarnings">0</span> JRY</p>
-  <p>Direct Referrals: <span id="myDirects">0</span></p>
-  <p>Team Size: <span id="myTeamSize">0</span></p>
-</div>
-
-<div class="info">
-  <input type="number" id="level" placeholder="Level (0-9)" min="0" max="9"><br>
-  <input type="text" id="referrer" placeholder="Referrer address"><br>
-  <button onclick="buyLevel()">Buy Level</button>
-</div>
-
-<h2>Your Team Tree</h2>
-<div id="network"></div>
 
 <script>
-const CONTRACT_ADDRESS = "0x33c847a9954f5FcB8a5cf32Bbbc3dDD56Bb80730";
-const CONTRACT_ABI = [
-  {
-    "inputs":[{"internalType":"address","name":"_jerryToken","type":"address"},{"internalType":"address","name":"_treasury","type":"address"}],
-    "stateMutability":"nonpayable","type":"constructor"
-  },
+/* ---------- CONFIG ---------- */
+const MATRIX_ADDRESS = "0x33c847a9954f5FcB8a5cf32Bbbc3dDD56Bb80730"; // JerrySmartMatrix
+const JRY_ADDRESS    = "0x2eb0d06Fad17a1Ba62D705873cF5E49778794134"; // Jerry token
+
+const MATRIX_ABI = [
+  {"inputs":[{"internalType":"address","name":"_jerryToken","type":"address"},{"internalType":"address","name":"_treasury","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
   {"inputs":[],"name":"DIRECT_RATE","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
   {"inputs":[],"name":"MAX_DIRECTS","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
   {"inputs":[],"name":"TOTAL_LEVELS","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
@@ -71,88 +102,204 @@ const CONTRACT_ABI = [
   {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"users","outputs":[{"internalType":"address","name":"referrer","type":"address"},{"internalType":"uint256","name":"directReferrals","type":"uint256"},{"internalType":"uint256","name":"totalEarned","type":"uint256"},{"internalType":"uint8","name":"maxLevel","type":"uint8"}],"stateMutability":"view","type":"function"}
 ];
 
-let web3;
-let contract;
-let selectedAccount;
+const ERC20_ABI = [
+  "function approve(address spender,uint256 amount) external returns (bool)",
+  "function allowance(address owner,address spender) view returns (uint256)",
+  "function balanceOf(address account) view returns (uint256)",
+  "function decimals() view returns (uint8)"
+];
+/* --------------------------- */
+
+let provider, signer, matrixContract, tokenContract, userAddress;
 let networkInstance;
 
-async function connectWallet(){
+const $ = id => document.getElementById(id);
+
+async function connect() {
+  try {
+    if(!window.ethereum) throw new Error("No Web3 wallet found");
+    provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+    await provider.send("eth_requestAccounts", []);
+    signer = provider.getSigner();
+    userAddress = await signer.getAddress();
+    $('addr').innerText = userAddress;
+    const network = await provider.getNetwork();
+    $('net').innerText = `${network.name} (chainId ${network.chainId})`;
+    // init contracts (use signer so send transactions work)
+    matrixContract = new ethers.Contract(MATRIX_ADDRESS, MATRIX_ABI, signer);
+    tokenContract = new ethers.Contract(JRY_ADDRESS, ERC20_ABI, signer);
+    $('tokenAddr').innerText = JRY_ADDRESS;
+    await loadAll();
+  } catch (e) {
+    alert("Connect failed: " + (e.message||e));
+    console.error(e);
+  }
+}
+
+$('btnConnect').onclick = connect;
+$('btnRefresh').onclick = async () => { if(matrixContract) await loadAll(); };
+
+/* load everything */
+async function loadAll(){
+  await Promise.all([ loadGeneralStats(), loadUserDashboard(), loadLevels() ]);
+  drawTeamTree();
+}
+
+/* general stats */
+async function loadGeneralStats(){
+  try{
+    const [tu, tc] = await Promise.all([ matrixContract.totalUsers(), matrixContract.totalCommissions() ]);
+    const dec = await safeDecimals();
+    $('totalUsers').innerText = tu.toString();
+    $('totalCommissions').innerText = ethers.utils.formatUnits(tc, dec);
+  }catch(e){ console.error("loadGeneralStats",e); }
+}
+
+/* safe decimals */
+async function safeDecimals(){
+  try{ return await tokenContract.decimals(); } catch(e){ return 18; }
+}
+
+/* user dashboard */
+async function loadUserDashboard(){
+  try{
+    if(!userAddress) return;
+    const u = await matrixContract.users(userAddress);
+    const dec = await safeDecimals();
+    $('myLevel').innerText = u.maxLevel;
+    $('myEarnings').innerText = ethers.utils.formatUnits(u.totalEarned, dec);
+    $('myDirects').innerText = u.directReferrals.toString();
+    $('myTeamSize').innerText = u.directReferrals.toString();
+  }catch(e){ console.error("loadUserDashboard",e); }
+}
+
+/* load levels and add buy click handlers */
+async function loadLevels(){
+  try{
+    const container = $('levelsContainer');
+    container.innerHTML = '';
+    const dec = await safeDecimals();
+    const totalLevels = 10; // contract TOTAL_LEVELS =10
+    for(let i=0;i<totalLevels;i++){
+      const priceBase = await matrixContract.levelPrice(i); // price stored as integer (e.g., 5000)
+      // contract uses price * 1e18 when transferring, so multiply by 1e18 to get token units
+      const priceTokenUnits = priceBase.mul(ethers.constants.WeiPerEther); // priceBase * 1e18
+      const priceHuman = ethers.utils.formatUnits(priceTokenUnits, dec);
+      const card = document.createElement('div'); card.className='level-card';
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:700">Level ${i}</div>
+            <div class="muted">Price: ${priceHuman} JRY</div>
+          </div>
+          <div>
+            <button class="buyBtn" data-level="${i}" data-price="${priceTokenUnits.toString()}">Buy</button>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    }
+    // attach handlers
+    Array.from(document.getElementsByClassName('buyBtn')).forEach(btn => {
+      btn.onclick = async (e) => {
+        const level = parseInt(e.currentTarget.dataset.level);
+        const priceStr = e.currentTarget.dataset.price;
+        const ref = prompt("Referrer address (or leave empty):", "");
+        const refAddr = (ref && ref.trim().length>0) ? ref.trim() : ethers.constants.AddressZero;
+        await buyWithAutoApprove(level, ethers.BigNumber.from(priceStr), refAddr);
+      };
+    });
+  }catch(e){ console.error("loadLevels",e); $('levelsContainer').innerText='Failed to load'; }
+}
+
+/* buy flow with auto-approve */
+async function buyWithAutoApprove(level, priceTokenUnits, referrer){
+  try{
+    if(!matrixContract || !tokenContract) throw new Error("Connect first");
+    // check user balance
+    const bal = await tokenContract.balanceOf(userAddress);
+    const dec = await safeDecimals();
+    if(bal.lt(priceTokenUnits)) {
+      alert(`Insufficient JRY balance. You have ${ethers.utils.formatUnits(bal,dec)} JRY`);
+      return;
+    }
+    // check allowance
+    let allowance = await tokenContract.allowance(userAddress, MATRIX_ADDRESS);
+    if(ethers.BigNumber.from(allowance).lt(priceTokenUnits)){
+      // request approval
+      showNotice("Requesting token approval — confirm in wallet");
+      const approveTx = await tokenContract.approve(MATRIX_ADDRESS, priceTokenUnits);
+      await approveTx.wait();
+      showNotice("Approval confirmed");
+    }
+    showNotice("Sending buyLevel tx — confirm in wallet");
+    const tx = await matrixContract.buyLevel(level, referrer);
+    await tx.wait();
+    showNotice("Level purchased ✓", 3000);
+    await loadAll();
+  } catch(e){
+    console.error("buyWithAutoApprove", e);
+    alert("Transaction failed: " + (e.message || e));
+    showNotice("",0);
+  }
+}
+
+/* simple notice area */
+function showNotice(txt, timeout=0){
+  let el = document.getElementById('net');
+  if(!txt){ el.innerText = ''; return; }
+  el.innerText = txt;
+  if(timeout>0) setTimeout(()=> el.innerText = '', timeout);
+}
+
+/* search */
+$('searchBtn').onclick = async ()=>{
+  const addr = $('searchInput').value.trim();
+  if(!addr) return alert("Enter address");
+  try{
+    const u = await matrixContract.users(addr);
+    const dec = await safeDecimals();
+    $('searchRes').innerText = `Ref: ${u.referrer} | Lvl:${u.maxLevel} | Earned:${ethers.utils.formatUnits(u.totalEarned,dec)} | Directs:${u.directReferrals}`;
+  }catch(e){ console.error(e); alert("Not found / error"); }
+};
+
+/* team tree (best-effort using directReferrals only) */
+async function drawTeamTree(){
+  try{
+    if(!matrixContract || !userAddress) return;
+    const nodes = [], edges = [];
+    nodes.push({id:userAddress, label: short(userAddress) + "\nYou", color:"#4CAF50"});
+    // We cannot read stored address[] team from ABI (not exposed). We'll show numbered direct placeholders.
+    const me = await matrixContract.users(userAddress);
+    const directs = parseInt(me.directReferrals.toString() || "0");
+    for(let i=0;i<directs;i++){
+      const id = userAddress + "_d_"+i;
+      nodes.push({id:id, label:"Direct #"+(i+1), color:"#87CEFA"});
+      edges.push({from:userAddress, to:id});
+    }
+    const container = $('network');
+    const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+    const options = { nodes:{shape:"box"}, layout:{hierarchical:{direction:"UD"}}, physics:{enabled:false} };
+    if(!networkInstance) networkInstance = new vis.Network(container, data, options);
+    else networkInstance.setData(data);
+  }catch(e){ console.error("drawTeamTree",e); $('network').innerText='Unable to load tree'; }
+}
+
+function short(a){ return a.slice(0,6) + "..." + a.slice(-4); }
+
+/* auto-connect if account present */
+(async ()=>{
   if(window.ethereum){
     try{
-      const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
-      selectedAccount = accounts[0];
-      document.getElementById("wallet-address").innerText = "✅ Connected: " + selectedAccount;
-      web3 = new Web3(window.ethereum);
-      contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-      updateStats();
-      updateUserInfo();
-      drawTeamTree();
-    }catch(err){ alert("❌ Connection failed: "+err.message); }
-  } else { alert("⚠️ Please install MetaMask!"); }
-}
-
-async function updateStats(){
-  if(!contract) return;
-  const totalUsers = await contract.methods.totalUsers().call();
-  const totalCommissions = await contract.methods.totalCommissions().call();
-  document.getElementById("totalUsers").innerText = totalUsers;
-  document.getElementById("totalCommissions").innerText = web3.utils.fromWei(totalCommissions,'ether');
-}
-
-async function updateUserInfo(){
-  if(!contract || !selectedAccount) return;
-  const user = await contract.methods.users(selectedAccount).call();
-  document.getElementById("myLevel").innerText = user.maxLevel;
-  document.getElementById("myEarnings").innerText = web3.utils.fromWei(user.totalEarned,'ether');
-  document.getElementById("myDirects").innerText = user.directReferrals;
-  document.getElementById("myTeamSize").innerText = user.directReferrals; 
-}
-
-async function buyLevel(){
-  if(!contract || !selectedAccount) return alert("Connect wallet first!");
-  const level = parseInt(document.getElementById("level").value);
-  const referrer = document.getElementById("referrer").value;
-  try{
-    await contract.methods.buyLevel(level, referrer).send({ from: selectedAccount });
-    alert("✅ Level purchased!");
-    updateStats();
-    updateUserInfo();
-    drawTeamTree();
-  }catch(err){ alert("❌ Transaction failed: "+err.message); }
-}
-
-// --- Team Tree ---
-async function drawTeamTree(){
-  if(!contract || !selectedAccount) return;
-  const nodes = [{id:selectedAccount,label:"You\nLvl:0",color:"#4CAF50"}];
-  const edges = [];
-
-  async function addTeamRecursive(addr, parent){
-    try{
-      const u = await contract.methods.users(addr).call();
-      // هنا نقدر نضيف الـ direct referrals فقط لأنه الـ team array ما موجودش في ABI
-      for(let i=0;i<u.directReferrals;i++){
-        const childId = addr + "_"+i;
-        nodes.push({id:childId,label:"Direct",color:"#87CEFA"});
-        edges.push({from:parent,to:childId});
-        // ما نقدرش ندخل deeper لغياب بيانات الفريق الحقيقية
+      const tmpProv = new ethers.providers.Web3Provider(window.ethereum);
+      const accs = await tmpProv.listAccounts();
+      if(accs && accs.length>0) {
+        // auto-connect
+        await connect();
       }
-    }catch(err){ console.error(err); }
+    }catch(e){}
   }
-
-  await addTeamRecursive(selectedAccount, selectedAccount);
-
-  const container = document.getElementById("network");
-  const data = {nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges)};
-  const options = { nodes:{shape:"box"}, edges:{arrows:"to"}, layout:{hierarchical:{direction:"UD"}}, physics:{enabled:false} };
-  
-  if(!networkInstance){
-    networkInstance = new vis.Network(container,data,options);
-  } else {
-    networkInstance.setData(data);
-  }
-}
+})();
 </script>
-
 </body>
 </html>

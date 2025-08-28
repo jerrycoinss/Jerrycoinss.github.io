@@ -3,18 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jerry Smart Matrix Free DApp</title>
+<title>Jerry Smart Matrix Free</title>
 <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider/dist/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
 <style>
 body { font-family: Arial; margin: 20px; }
 button { padding: 10px 20px; margin: 5px; }
-input, select { padding: 5px; margin: 5px; }
+input, select { padding: 5px; margin: 5px; width: 300px; max-width: 100%; }
 </style>
 </head>
 <body>
 <h1>Jerry Smart Matrix Free</h1>
-<button id="connectWallet">Connect Wallet</button><br>
+<button id="connectWallet">Connect Wallet</button><br><br>
+
 <select id="levelSelect">
 <option value="1">Level 1</option>
 <option value="2">Level 2</option>
@@ -28,32 +29,56 @@ input, select { padding: 5px; margin: 5px; }
 <option value="10">Level 10</option>
 <option value="11">Level 11</option>
 </select><br>
-<input type="text" id="referrer" placeholder="Referrer Address">
+
+<input type="text" id="referrer" placeholder="Referrer Address"><br>
 <button id="buyLevel">Buy Level</button>
 
 <script>
 let web3;
 let contract;
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS";
+const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS"; // استبدل بالعقد الخاص بك
 const ABI = [ /* ضع ABI الخاص بالعقد هنا */ ];
 
-document.getElementById("connectWallet").onclick = async () => {
-    const provider = new WalletConnectProvider.default({
-        rpc: { 56: "https://bsc-dataseed.binance.org/" }
-    });
-    await provider.enable();
-    web3 = new Web3(provider);
+async function connectWallet() {
+    if (window.ethereum) {
+        // MetaMask
+        web3 = new Web3(window.ethereum);
+        try {
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+        } catch (error) {
+            alert("User denied MetaMask access");
+            return;
+        }
+    } else {
+        // WalletConnect
+        const provider = new WalletConnectProvider.default({
+            rpc: { 56: "https://bsc-dataseed.binance.org/" }
+        });
+        await provider.enable();
+        web3 = new Web3(provider);
+    }
+
     contract = new web3.eth.Contract(ABI, CONTRACT_ADDRESS);
     alert("Wallet Connected!");
-};
+}
+
+document.getElementById("connectWallet").onclick = connectWallet;
 
 document.getElementById("buyLevel").onclick = async () => {
+    if (!web3) {
+        alert("Please connect your wallet first");
+        return;
+    }
     const accounts = await web3.eth.getAccounts();
     const level = document.getElementById("levelSelect").value;
     const referrer = document.getElementById("referrer").value || "0x0000000000000000000000000000000000000000";
 
-    await contract.methods.buyLevel(level, referrer).send({ from: accounts[0] });
-    alert("Level Purchased!");
+    try {
+        await contract.methods.buyLevel(level, referrer).send({ from: accounts[0] });
+        alert("Level Purchased!");
+    } catch (error) {
+        alert("Transaction failed: " + error.message);
+    }
 };
 </script>
 </body>

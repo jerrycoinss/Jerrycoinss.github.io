@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jerry Smart Matrix DApp</title>
+<title>Jerry Smart Matrix Free DApp</title>
 <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider/dist/umd/index.min.js"></script>
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; }
+body { font-family: Arial; margin: 20px; }
 button { padding: 10px 20px; margin: 5px; }
 input, select { padding: 5px; margin: 5px; }
 </style>
 </head>
 <body>
-<h1>Jerry Smart Matrix</h1>
+<h1>Jerry Smart Matrix Free</h1>
 <button id="connectWallet">Connect Wallet</button><br>
 <select id="levelSelect">
 <option value="1">Level 1</option>
@@ -35,7 +35,7 @@ input, select { padding: 5px; margin: 5px; }
 let web3;
 let contract;
 const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS";
-const ABI = [ /* ضع هنا ABI الكامل */ ];
+const ABI = [ /* ضع ABI الخاص بالعقد هنا */ ];
 
 document.getElementById("connectWallet").onclick = async () => {
     const provider = new WalletConnectProvider.default({
